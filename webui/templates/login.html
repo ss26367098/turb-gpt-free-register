@@ -255,7 +255,29 @@
     .submit:active {
       transform: scale(0.99);
     }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+    }
+    html[data-theme="dark"] body { background: #0d1320; color: #e7ecf5; }
+    html[data-theme="dark"] .bg-quarter-bl { background: #161d2c; }
+    html[data-theme="dark"] .bg-dots span { background: #33405c; }
+    html[data-theme="dark"] .brand-title,
+    html[data-theme="dark"] .card h1 { color: #eef2f9; }
+    html[data-theme="dark"] .card {
+      background: #161d2c;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    html[data-theme="dark"] .desc,
+    html[data-theme="dark"] .remember { color: #8b95a8; }
+    html[data-theme="dark"] .err { border-color: #5b2830; background: #3b2027; color: #f87171; }
+    html[data-theme="dark"] .toggle-password:hover { background: #1a2334; }
+    html[data-theme="dark"] .input-wrap input {
+      border-color: #2a3550; background: #111827; color: #e7ecf5;
+    }
+    html[data-theme="dark"] .input-wrap input::placeholder { color: #64708a; }
   </style>
+  <script>(function(){try{var t=localStorage.getItem('theme');if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 </head>
 <body>
   <div class="bg" aria-hidden="true">

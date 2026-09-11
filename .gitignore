@@ -88,3 +88,4 @@ webui.log
 webui.pid
 logs/
 run/
+.claude/

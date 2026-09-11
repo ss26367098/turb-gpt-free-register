@@ -8,6 +8,14 @@
     * { box-sizing: border-box; }
     html { max-width: 100%; overflow-x: hidden; }
     :root {
+      /* 主题令牌（亮色值 = 原配色；深色在 html[data-theme="dark"] 覆盖） */
+      --soft: #f5f7fa; --soft-2: #f8fafc;
+      --line: #dcdfe6; --line-2: #eef0f4; --line-strong: #c0c4cc;
+      --primary-soft: #ecf5ff; --primary-soft-2: #c6e2ff; --primary-line: #c6e2ff;
+      --danger-soft: #fff0ef; --warning-soft: #fff7e6; --success-soft: #e7fcf8;
+      --text-strong: #172033; --text-2: #606266; --text-3: #909399; --text-disabled: #c0c4cc;
+      --success-text: #16803c; --warning-text: #b7791f; --danger-text: #c2413a;
+
       --bg: #eef3f8; --surface: #ffffff; --soft: #f7f9fc; --text: #172033;
       --muted: #667085; --line: #d9e2ec; --blue: #2563eb; --green: #16803c;
       --red: #c2413a; --amber: #b7791f;
@@ -87,15 +95,15 @@
     }
     .row .action-cell .btn { min-height: 38px; }
     button.btn {
-      min-height: 38px; border: 1px solid var(--line); border-radius: 7px; background: #fff;
+      min-height: 38px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface);
       padding: 0 14px; font-weight: 800; cursor: pointer; font-size: 13px;
       display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
     }
     button.btn:hover { background: var(--soft); }
     button.btn.primary { border-color: var(--blue); background: var(--blue); color: #fff; }
-    button.btn.good { border-color: #2f855a; background: #edf8f1; color: #166534; }
-    button.btn.danger { border-color: #e7a3a0; color: #b3261e; background: #fff; }
-    button.btn:disabled { color: #98a2b3; cursor: not-allowed; background: #f2f4f7; border-color: var(--line); }
+    button.btn.good { border-color: #2f855a; background: #edf8f1; color: var(--success-text); }
+    button.btn.danger { border-color: #e7a3a0; color: var(--danger-text); background: var(--surface); }
+    button.btn:disabled { color: #98a2b3; cursor: not-allowed; background: var(--soft); border-color: var(--line); }
     .toolbar { padding: 14px 16px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
     .search { flex: 1; min-width: min(420px, 100%); }
     .search input { margin-top: 0; }
@@ -137,19 +145,19 @@
     .accounts-table td:nth-child(11), .accounts-table th:nth-child(11) { overflow: visible; text-overflow: clip; }
     .outlook-table .col-actions { width: 220px; }
     .codex-table .col-actions { width: 260px; }
-    th { position: sticky; top: 0; background: #fbfcfe; color: #475467; z-index: 1; font-size: 12px; }
-    tr:hover td { background: #fbfdff; }
+    th { position: sticky; top: 0; background: var(--soft-2); color: #475467; z-index: 1; font-size: 12px; }
+    tr:hover td { background: var(--soft-2); }
     .main-cell { font-weight: 700; }
     .sub-cell { margin-top: 3px; color: var(--muted); font-size: 12px; }
     .mono { font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; font-size: 12px; }
     .muted { color: var(--muted); }
     .pill { display: inline-flex; min-width: 48px; justify-content: center; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
     .status-available, .status-pending { color: var(--blue); background: #eef4ff; }
-    .status-used, .status-cancelled, .status-stopped, .status-disabled { color: #475467; background: #f2f4f7; }
-    .status-stopping { color: var(--amber); background: #fff7e6; }
-    .status-failed { color: var(--red); background: #fff0ef; }
-    .status-partial_success { color: #9a6700; background: #fff7d6; }
-    .status-running { color: var(--amber); background: #fff7e6; }
+    .status-used, .status-cancelled, .status-stopped, .status-disabled { color: #475467; background: var(--soft); }
+    .status-stopping { color: var(--amber); background: var(--warning-soft); }
+    .status-failed { color: var(--red); background: var(--danger-soft); }
+    .status-partial_success { color: #9a6700; background: var(--surface)7d6; }
+    .status-running { color: var(--amber); background: var(--warning-soft); }
     .status-success { color: var(--green); background: #e9f7ef; }
     .extract-link-cell {
       display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
@@ -163,10 +171,10 @@
       cursor: pointer; white-space: nowrap; transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
     }
     .extract-link-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(22,128,60,.10); }
-    .extract-copy { color: #166534; background: linear-gradient(180deg, #f0fbf5, #e3f5ea); border-color: #b9dfc9; }
-    .extract-qr { color: #1d4ed8; background: linear-gradient(180deg, #f3f7ff, #e8f0ff); border-color: #bdd0ff; }
+    .extract-copy { color: var(--success-text); background: linear-gradient(180deg, var(--success-soft), var(--success-soft)); border-color: #b9dfc9; }
+    .extract-qr { color: #1d4ed8; background: linear-gradient(180deg, var(--primary-soft), var(--primary-soft)); border-color: #bdd0ff; }
     .extract-link-expire {
-      flex-basis: 100%; margin-top: 1px; color: #667085; font-size: 12px;
+      flex-basis: 100%; margin-top: 1px; color: var(--text-3); font-size: 12px;
       display: inline-flex; align-items: center; gap: 4px;
     }
     .extract-link-error {
@@ -174,12 +182,12 @@
       max-width: 260px; white-space: normal; overflow-wrap: anywhere;
     }
     .agent-token-cell { margin-top: 4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-    .agent-token-cell button { min-height:24px; border:1px solid #b9dfc9; border-radius:999px; background:#f0fbf5; color:#166534; padding:0 9px; font-size:12px; font-weight:800; cursor:pointer; }
-    .agent-token-cell .agent-download { border-color:#bdd0ff; background:#f3f7ff; color:#1d4ed8; }
+    .agent-token-cell button { min-height:24px; border:1px solid #b9dfc9; border-radius:999px; background:var(--success-soft); color:var(--success-text); padding:0 9px; font-size:12px; font-weight:800; cursor:pointer; }
+    .agent-token-cell .agent-download { border-color:#bdd0ff; background:var(--primary-soft); color:#1d4ed8; }
     .twofa-action {
       display: inline-flex; align-items: center; justify-content: center;
       min-height: 24px; padding: 0 10px; border-radius: 999px;
-      border: 1px solid #b9dfc9; background: #f0fbf5; color: #166534;
+      border: 1px solid #b9dfc9; background: var(--success-soft); color: var(--success-text);
       font-size: 12px; font-weight: 800; line-height: 1; cursor: pointer;
       white-space: nowrap;
     }
@@ -188,14 +196,14 @@
     .twofa-badge {
       display: inline-flex; align-items: center; justify-content: center;
       min-height: 24px; padding: 0 10px; border-radius: 999px;
-      border: 1px solid #9ee0d6; background: #E7FCF8; color: #2bb8a6;
+      border: 1px solid #9ee0d6; background: var(--success-soft); color: #2bb8a6;
       font-size: 12px; font-weight: 800; line-height: 1; white-space: nowrap;
     }
     .twofa-actions { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
     .twofa-code {
       display: inline-flex; align-items: center; justify-content: center;
       min-height: 24px; padding: 0 10px; border-radius: 999px;
-      border: 1px solid #bdd0ff; background: #f3f7ff; color: #1d4ed8;
+      border: 1px solid #bdd0ff; background: var(--primary-soft); color: #1d4ed8;
       font-family: ui-monospace, Consolas, monospace;
       font-size: 12px; font-weight: 900; line-height: 1; letter-spacing: .08em;
       white-space: nowrap;
@@ -204,10 +212,10 @@
     .jobs-table td.actions-cell { text-align: center; vertical-align: middle; overflow: visible; }
     .job-actions { justify-content: center; flex-wrap: nowrap; width: 100%; }
     .job-actions button { flex: 0 0 auto; }
-    .actions button { min-height: 30px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 0 10px; font-weight: 800; cursor: pointer; font-size: 12px; line-height: 1; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
+    .actions button { min-height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 0 10px; font-weight: 800; cursor: pointer; font-size: 12px; line-height: 1; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
     .actions button.primary { border-color: var(--blue); background: var(--blue); color: #fff; }
-    .actions button.good { border-color: #2f855a; background: #edf8f1; color: #166534; }
-    .actions button.danger { border-color: #e7a3a0; color: #b3261e; background: #fff; }
+    .actions button.good { border-color: #2f855a; background: #edf8f1; color: var(--success-text); }
+    .actions button.danger { border-color: #e7a3a0; color: var(--danger-text); background: var(--surface); }
 
     /* 账号列表紧凑布局 */
     .accounts-toolbar {
@@ -225,15 +233,15 @@
     .btn-group {
       display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;
       padding: 6px; border: 1px solid #e6edf5; border-radius: 12px;
-      background: linear-gradient(180deg, #fbfdff, #f7faff);
+      background: linear-gradient(180deg, var(--soft-2), var(--soft-2));
       box-shadow: 0 1px 0 rgba(15,23,42,.02);
     }
-    .btn-group-title { color: #667085; font-size: 12px; font-weight: 900; padding: 0 4px; white-space: nowrap; }
+    .btn-group-title { color: var(--text-3); font-size: 12px; font-weight: 900; padding: 0 4px; white-space: nowrap; }
     .toolbar-sep { display: none; }
     .accounts-toolbar button.btn { min-height: 32px; padding: 0 10px; font-size: 12px; border-radius: 8px; }
     .accounts-toolbar .inline-num {
       min-height: 32px; padding: 0 9px; border: 1px solid #e5edf6; border-radius: 999px;
-      background: #fff; color: #5f6f86;
+      background: var(--surface); color: #5f6f86;
     }
     .accounts-toolbar .inline-num input[type="number"] { width: 56px; min-height: 26px; padding: 2px 6px; border-radius: 7px; }
     .accounts-toolbar .inline-num input[type="checkbox"] { margin: 0; }
@@ -262,13 +270,13 @@
     .account-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
     .account-action-group {
       display: inline-flex; align-items: center; gap: 4px; flex-wrap: nowrap;
-      padding: 3px; border: 1px solid #edf1f5; border-radius: 8px; background: #fbfdff;
+      padding: 3px; border: 1px solid #edf1f5; border-radius: 8px; background: var(--soft-2);
     }
-    .account-action-group.danger-zone { background: #fffafa; border-color: #f4d8d6; }
+    .account-action-group.danger-zone { background: var(--surface)afa; border-color: #f4d8d6; }
     .account-action-group button { box-shadow: 0 1px 0 rgba(15,23,42,.03); }
     .account-action-group button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(15,23,42,.08); }
     .account-action-group .primary { background: #2563eb; border-color: #2563eb; color: #fff; }
-    .account-action-group .good { background: #edf8f1; border-color: #b9dfc9; color: #166534; }
+    .account-action-group .good { background: #edf8f1; border-color: #b9dfc9; color: var(--success-text); }
     .accounts-table .extract-link-cell { gap: 4px; margin-top: 3px; }
     .accounts-table .extract-link-btn, .accounts-table .agent-token-cell button { min-height: 22px; padding: 0 7px; font-size: 11px; }
     .accounts-table .agent-token-cell { gap: 4px; margin-top: 2px; }
@@ -280,7 +288,7 @@
       .toolbar-sep { display: none; }
     }
     .banner { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; }
-    .banner.warn { background: #fff7e6; color: #92600a; border: 1px solid #f3d99b; }
+    .banner.warn { background: var(--warning-soft); color: #92600a; border: 1px solid #f3d99b; }
     .banner.info { background: #eef4ff; color: #1d4ed8; border: 1px solid #c3d4fb; }
     .log {
       margin-top: 8px; background: #0c1322; color: #cbd5e1; border-radius: 6px; padding: 12px;
@@ -301,7 +309,7 @@
     #logPanel h3, #retryLogPanel h3, #liveLogPanel h3, #totpLogPanel h3, #qrPanel h3 { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
     #logPanel h3 .btn, #retryLogPanel h3 .btn, #liveLogPanel h3 .btn, #totpLogPanel h3 .btn, #qrPanel h3 .btn { margin-left:auto; float:none !important; }
     #logPanel .log, #retryLogPanel .log, #liveLogPanel .log, #totpLogPanel .log { max-height: calc(min(760px, calc(100vh - 48px)) - 74px); margin-top:0; }
-    #qrPanel img { display:block; max-width:min(360px, calc(100vw - 96px)); max-height:420px; margin:12px auto; border:1px solid var(--line); border-radius:10px; background:#fff; }
+    #qrPanel img { display:block; max-width:min(360px, calc(100vw - 96px)); max-height:420px; margin:12px auto; border:1px solid var(--line); border-radius:10px; background:var(--surface); }
     #qrPanel .qr-link { display:block; word-break:break-all; white-space:normal; font-size:12px; color:var(--muted); margin-top:8px; }
     .hidden { display: none !important; }
     #toast {
@@ -317,9 +325,9 @@
     }
     .pager-bar button {
       min-height: 30px; border: 1px solid var(--line); border-radius: 6px;
-      background: #fff; padding: 0 12px; cursor: pointer; font-size: 12px; font-weight: 700;
+      background: var(--surface); padding: 0 12px; cursor: pointer; font-size: 12px; font-weight: 700;
     }
-    .pager-bar button:disabled { color: #98a2b3; cursor: not-allowed; background: #f2f4f7; }
+    .pager-bar button:disabled { color: #98a2b3; cursor: not-allowed; background: var(--soft); }
     .pager-bar button:not(:disabled):hover { background: var(--soft); }
     .pager-bar .pager-info { color: var(--muted); font-size: 12px; flex: 1; text-align: center; }
     .pager-bar select {
@@ -331,7 +339,7 @@
       padding-bottom: 12px; border-bottom: 1px solid var(--line);
     }
     .config-tabs button {
-      border: 1px solid var(--line); background: #fff; color: #475467;
+      border: 1px solid var(--line); background: var(--surface); color: #475467;
       border-radius: 999px; min-height: 34px; padding: 0 14px;
       cursor: pointer; font-weight: 800; font-size: 13px;
     }
@@ -349,16 +357,16 @@
     .config-subhead .remail-promo-notice {
       display: inline-flex; align-items: center; width: fit-content;
       margin: 0 0 0 10px; padding: 7px 11px;
-      color: #b42318; background: #fff1f0; border: 1px solid #fecdca;
+      color: #b42318; background: var(--surface)1f0; border: 1px solid #fecdca;
       border-radius: 7px; font-size: 12px; font-weight: 800; line-height: 1.4;
       vertical-align: middle; white-space: nowrap;
     }
     .config-subtabs {
       grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap;
-      padding: 8px; border: 1px solid #edf1f5; border-radius: 8px; background: #fbfcfe;
+      padding: 8px; border: 1px solid #edf1f5; border-radius: 8px; background: var(--soft-2);
     }
     .config-subtabs button {
-      border: 1px solid var(--line); background: #fff; color: #475467;
+      border: 1px solid var(--line); background: var(--surface); color: #475467;
       border-radius: 999px; min-height: 30px; padding: 0 12px;
       cursor: pointer; font-weight: 800; font-size: 12px;
     }
@@ -366,7 +374,7 @@
     .config-subtabs button.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
     .config-panel label.fld {
       min-width: 0; max-width: 100%; overflow: visible;
-      padding: 10px 12px; border: 1px solid #edf1f5; border-radius: 8px; background: #fff;
+      padding: 10px 12px; border: 1px solid #edf1f5; border-radius: 8px; background: var(--surface);
     }
     .config-panel label.fld > input,
     .config-panel label.fld > select,
@@ -389,7 +397,7 @@
     .config-external-link:hover { text-decoration: underline; }
     .config-recommendations {
       margin-top: 9px; padding: 10px 12px;
-      border: 1px solid #c3d4fb; border-radius: 8px; background: #f4f8ff;
+      border: 1px solid #c3d4fb; border-radius: 8px; background: var(--primary-soft);
       font-size: 12px; line-height: 1.55; color: var(--muted);
     }
     .config-recommendations-title { color: var(--text); font-weight: 700; }
@@ -405,10 +413,27 @@
     .roxy-invite-link {
       display: inline-flex; align-items: center; justify-content: center; width: fit-content;
       min-height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid #9bbcff;
-      background: #fff; color: var(--blue); text-decoration: none; font-size: 12px; font-weight: 800;
+      background: var(--surface); color: var(--blue); text-decoration: none; font-size: 12px; font-weight: 800;
     }
     .roxy-invite-link:hover { background: #e0ebff; }
-  </style>
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0d1320; --surface: #161d2c; --soft: #111827; --soft-2: #1a2334;
+      --text: #e7ecf5; --muted: #8b95a8; --line: #2a3550; --line-2: #212b44; --line-strong: #3d4a68;
+      --blue: #5a94ff; --green: #34d399; --red: #f87171; --amber: #fbbf24;
+      --primary-soft: #1c2a4d; --primary-soft-2: #22345f; --primary-line: #33518f;
+      --danger-soft: #3b2027; --warning-soft: #3a2c10; --success-soft: #12312c;
+      --text-strong: #eef2f9; --text-2: #bfc9d9; --text-3: #8b95a8; --text-disabled: #64708a;
+      --success-text: #4ade80; --warning-text: #fbbf24; --danger-text: #f87171;
+      --sidebar-accent: #8aa4ff; --sidebar-accent-soft: #1e2a4d;
+    }
+
+    .theme-icon-sun { display: none; }
+    html[data-theme="dark"] .theme-icon-sun { display: inline-flex; }
+    html[data-theme="dark"] .theme-icon-moon { display: none; }
+</style>
+<script>(function(){try{var t=localStorage.getItem('theme');if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 </head>
 <body>
 <header>
@@ -418,6 +443,7 @@
       <p class="meta">本地 Web 控制台 · 数据更新于 <span id="updatedAt">-</span></p>
       <div class="header-links">
         <a href="https://t.me/+gu_cvEKq_vcyZWRl" target="_blank" rel="noopener noreferrer">TG 交流群</a>
+        <a href="javascript:void(0)" id="themeToggle" title="切换深色/浅色模式"><span id="themeToggleLabel">深色模式</span></a>
         <a href="/?ui=modern" title="切换到新版侧边栏 UI">切换新 UI</a>
         <form method="post" action="/logout"><button type="submit">退出</button></form>
       </div>
@@ -3240,7 +3266,8 @@ function smsConfigSectionForKey(key) {
   if (['SMS_PROVIDER','SMS_COUNTRY','SMS_SERVICE','SMS_MAX_RETRIES','SMS_CODE_WAIT'].includes(key)) {
     return ['通用接码', '接码通道选择、国家/服务代码、等待和重试参数；H 通道可复用 SMS_SERVICE/SMS_COUNTRY 作为 projectId/country'];
   }
-  if (key === 'SMS_API_KEY') return ['GrizzlySMS', 'GrizzlySMS 平台 API Key 配置'];
+  if (key === 'SMS_API_KEY') return ['GrizzlySMS/SMSBower', 'GrizzlySMS 或 SMSBower 平台 API Key 配置'];
+  if (key === 'SMS_API_BASE' || key === 'SMSBOWER_API_BASE') return ['GrizzlySMS/SMSBower', 'handler_api 协议平台 API 基址；SMSBower 的 OpenAI 服务代码是 dr'];
   if (key.startsWith('H_')) return ['H 接码', 'H_API.md 本地 H 取号服务配置；项目ID/国家留空时复用通用字段'];
   if (key.startsWith('L_')) return ['L 接码', 'L_API.md 本地 L 取号服务配置'];
   return ['其他接码配置', ''];
@@ -3310,7 +3337,7 @@ function renderConfigFields(fields) {
       CONFIG_SMS_ACTIVE_SECTION,
       v => { CONFIG_SMS_ACTIVE_SECTION = v; },
       smsConfigSectionForKey,
-      ['通用接码', 'GrizzlySMS', 'H 接码', 'L 接码', '其他接码配置'],
+      ['通用接码', 'GrizzlySMS/SMSBower', 'H 接码', 'L 接码', '其他接码配置'],
       'sms-config-section'
     );
   }
@@ -3635,5 +3662,6 @@ jobsTimer = setInterval(() => { if (!$('#tab-register').classList.contains('hidd
 setInterval(loadSummary, 30000);
 setInterval(() => { if (!$('#tab-accounts').classList.contains('hidden')) pollAccountPlanStatuses(); }, 10000);
 </script>
+<script>(function(){var root=document.documentElement;var btn=document.getElementById('themeToggle');var label=document.getElementById('themeToggleLabel');function sync(){if(label){label.textContent=(root.getAttribute('data-theme')==='dark')?'浅色模式':'深色模式';}}if(btn){btn.addEventListener('click',function(){var next=(root.getAttribute('data-theme')==='dark')?'light':'dark';root.setAttribute('data-theme',next);try{localStorage.setItem('theme',next);}catch(e){}sync();});}sync();})();</script>
 </body>
 </html>
