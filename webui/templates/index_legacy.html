@@ -12,7 +12,7 @@
       --soft: #f5f7fa; --soft-2: #f8fafc;
       --line: #dcdfe6; --line-2: #eef0f4; --line-strong: #c0c4cc;
       --primary-soft: #ecf5ff; --primary-soft-2: #c6e2ff; --primary-line: #c6e2ff;
-      --danger-soft: #fff0ef; --warning-soft: #fff7e6; --success-soft: #e7fcf8;
+      --danger-soft: #fff0ef; --warning-soft: #fff7e6; --success-soft: #e7fcf8; --danger-line: #f4d8d6;
       --text-strong: #172033; --text-2: #606266; --text-3: #909399; --text-disabled: #c0c4cc;
       --success-text: #16803c; --warning-text: #b7791f; --danger-text: #c2413a;
 
@@ -101,7 +101,7 @@
     }
     button.btn:hover { background: var(--soft); }
     button.btn.primary { border-color: var(--blue); background: var(--blue); color: #fff; }
-    button.btn.good { border-color: #2f855a; background: #edf8f1; color: var(--success-text); }
+    button.btn.good { border-color: #2f855a; background: var(--success-soft); color: var(--success-text); }
     button.btn.danger { border-color: #e7a3a0; color: var(--danger-text); background: var(--surface); }
     button.btn:disabled { color: #98a2b3; cursor: not-allowed; background: var(--soft); border-color: var(--line); }
     .toolbar { padding: 14px 16px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
@@ -145,20 +145,20 @@
     .accounts-table td:nth-child(11), .accounts-table th:nth-child(11) { overflow: visible; text-overflow: clip; }
     .outlook-table .col-actions { width: 220px; }
     .codex-table .col-actions { width: 260px; }
-    th { position: sticky; top: 0; background: var(--soft-2); color: #475467; z-index: 1; font-size: 12px; }
+    th { position: sticky; top: 0; background: var(--soft-2); color: var(--text-2); z-index: 1; font-size: 12px; }
     tr:hover td { background: var(--soft-2); }
     .main-cell { font-weight: 700; }
     .sub-cell { margin-top: 3px; color: var(--muted); font-size: 12px; }
     .mono { font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; font-size: 12px; }
     .muted { color: var(--muted); }
     .pill { display: inline-flex; min-width: 48px; justify-content: center; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
-    .status-available, .status-pending { color: var(--blue); background: #eef4ff; }
-    .status-used, .status-cancelled, .status-stopped, .status-disabled { color: #475467; background: var(--soft); }
+    .status-available, .status-pending { color: var(--blue); background: var(--primary-soft); }
+    .status-used, .status-cancelled, .status-stopped, .status-disabled { color: var(--text-2); background: var(--soft); }
     .status-stopping { color: var(--amber); background: var(--warning-soft); }
     .status-failed { color: var(--red); background: var(--danger-soft); }
-    .status-partial_success { color: #9a6700; background: var(--surface)7d6; }
+    .status-partial_success { color: #9a6700; background: var(--warning-soft); }
     .status-running { color: var(--amber); background: var(--warning-soft); }
-    .status-success { color: var(--green); background: #e9f7ef; }
+    .status-success { color: var(--green); background: var(--success-soft); }
     .extract-link-cell {
       display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
       margin-top: 4px; max-width: 100%;
@@ -214,7 +214,7 @@
     .job-actions button { flex: 0 0 auto; }
     .actions button { min-height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 0 10px; font-weight: 800; cursor: pointer; font-size: 12px; line-height: 1; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
     .actions button.primary { border-color: var(--blue); background: var(--blue); color: #fff; }
-    .actions button.good { border-color: #2f855a; background: #edf8f1; color: var(--success-text); }
+    .actions button.good { border-color: #2f855a; background: var(--success-soft); color: var(--success-text); }
     .actions button.danger { border-color: #e7a3a0; color: var(--danger-text); background: var(--surface); }
 
     /* 账号列表紧凑布局 */
@@ -249,7 +249,7 @@
     .accounts-table th, .accounts-table td { padding: 7px 8px; }
     .accounts-table .col-check { width: 34px; }
     .accounts-table .col-id { width: 52px; }
-    .accounts-table .col-email { width: 250px; }
+    .accounts-table .col-email { width: 320px; }
     .accounts-table .col-source { width: 80px; }
     .accounts-table .col-token { width: 92px; }
     .accounts-table .col-password { width: 120px; }
@@ -259,24 +259,44 @@
     .accounts-table .col-status { width: 88px; }
     .accounts-table .col-agent { width: 220px; }
     .accounts-table .col-time { width: 170px; }
-    .accounts-table .col-actions { width: 330px; }
+    .accounts-table .col-actions { width: 380px; }
     .accounts-table .main-cell { font-size: 12px; }
     .accounts-table .sub-cell { margin-top: 1px; font-size: 11px; }
+    .accounts-table .account-email-cell {
+      white-space: normal; overflow: visible; text-overflow: clip; vertical-align: middle;
+    }
+    .accounts-table .account-email-cell .main-cell,
+    .accounts-table .account-email-history,
+    .accounts-table .account-email-user,
+    .accounts-table .account-email-status {
+      white-space: normal; overflow: visible; text-overflow: clip;
+      overflow-wrap: anywhere; word-break: break-word; line-height: 1.35;
+    }
+    .accounts-table .account-email-history,
+    .accounts-table .account-email-user,
+    .accounts-table .account-email-status { margin-top: 2px; font-size: 11px; }
+    .accounts-table .account-email-history { color: var(--muted); }
+    .accounts-table .account-email-user { color: var(--text-2); }
+    .accounts-table .account-email-status { color: var(--warning-text); }
     .accounts-table .mono { font-size: 11px; }
     .accounts-table .pill { min-width: auto; padding: 2px 6px; font-size: 11px; }
     .accounts-table .actions { gap: 4px; }
     .accounts-table .actions button { min-height: 24px; padding: 0 7px; font-size: 11px; border-radius: 5px; transition: transform .12s ease, box-shadow .12s ease, background .12s ease; }
 
-    .account-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+    .account-row-actions {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start; gap: 5px; width: 100%;
+    }
     .account-action-group {
-      display: inline-flex; align-items: center; gap: 4px; flex-wrap: nowrap;
+      display: flex; align-items: center; align-content: flex-start; gap: 4px; flex-wrap: wrap;
       padding: 3px; border: 1px solid #edf1f5; border-radius: 8px; background: var(--soft-2);
     }
-    .account-action-group.danger-zone { background: var(--surface)afa; border-color: #f4d8d6; }
+    .account-action-group button { flex: 1 1 auto; white-space: nowrap; }
+    .account-action-group.danger-zone { background: var(--surface); border-color: #f4d8d6; }
     .account-action-group button { box-shadow: 0 1px 0 rgba(15,23,42,.03); }
     .account-action-group button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(15,23,42,.08); }
     .account-action-group .primary { background: #2563eb; border-color: #2563eb; color: #fff; }
-    .account-action-group .good { background: #edf8f1; border-color: #b9dfc9; color: var(--success-text); }
+    .account-action-group .good { background: var(--success-soft); border-color: #b9dfc9; color: var(--success-text); }
     .accounts-table .extract-link-cell { gap: 4px; margin-top: 3px; }
     .accounts-table .extract-link-btn, .accounts-table .agent-token-cell button { min-height: 22px; padding: 0 7px; font-size: 11px; }
     .accounts-table .agent-token-cell { gap: 4px; margin-top: 2px; }
@@ -286,10 +306,11 @@
       .accounts-toolbar .search { max-width: none; flex-basis: auto; }
       .account-filter-strip, .accounts-actionbar { justify-content: flex-start; }
       .toolbar-sep { display: none; }
+      .account-row-actions { grid-template-columns: 1fr; }
     }
     .banner { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; }
     .banner.warn { background: var(--warning-soft); color: #92600a; border: 1px solid #f3d99b; }
-    .banner.info { background: #eef4ff; color: #1d4ed8; border: 1px solid #c3d4fb; }
+    .banner.info { background: var(--primary-soft); color: #1d4ed8; border: 1px solid #c3d4fb; }
     .log {
       margin-top: 8px; background: #0c1322; color: #cbd5e1; border-radius: 6px; padding: 12px;
       font-family: ui-monospace, Consolas, monospace; font-size: 12px;
@@ -297,8 +318,8 @@
       width: 100%; max-width: 100%; min-width: 0;
       max-height: 320px; overflow: auto; line-height: 1.5;
     }
-    #logPanel, #retryLogPanel, #liveLogPanel, #totpLogPanel, #qrPanel { min-width: 0; max-width: 100%; overflow-x: hidden; }
-    #logPanel:not(.hidden), #retryLogPanel:not(.hidden), #liveLogPanel:not(.hidden), #totpLogPanel:not(.hidden), #qrPanel:not(.hidden) {
+    #logPanel, #retryLogPanel, #liveLogPanel, #totpLogPanel, #emailChangeLogPanel, #qrPanel { min-width: 0; max-width: 100%; overflow-x: hidden; }
+    #logPanel:not(.hidden), #retryLogPanel:not(.hidden), #liveLogPanel:not(.hidden), #totpLogPanel:not(.hidden), #emailChangeLogPanel:not(.hidden), #qrPanel:not(.hidden) {
       position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
       z-index: 1000; display: block; width: min(1100px, calc(100vw - 48px));
       max-height: min(760px, calc(100vh - 48px)); overflow: hidden;
@@ -306,10 +327,10 @@
       background: var(--surface); box-shadow: 0 0 0 9999px rgba(15,23,42,.45), 0 24px 70px rgba(15,23,42,.34);
     }
     #qrPanel:not(.hidden) { width: min(520px, calc(100vw - 48px)); text-align: center; }
-    #logPanel h3, #retryLogPanel h3, #liveLogPanel h3, #totpLogPanel h3, #qrPanel h3 { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-    #logPanel h3 .btn, #retryLogPanel h3 .btn, #liveLogPanel h3 .btn, #totpLogPanel h3 .btn, #qrPanel h3 .btn { margin-left:auto; float:none !important; }
-    #logPanel .log, #retryLogPanel .log, #liveLogPanel .log, #totpLogPanel .log { max-height: calc(min(760px, calc(100vh - 48px)) - 74px); margin-top:0; }
-    #qrPanel img { display:block; max-width:min(360px, calc(100vw - 96px)); max-height:420px; margin:12px auto; border:1px solid var(--line); border-radius:10px; background:var(--surface); }
+    #logPanel h3, #retryLogPanel h3, #liveLogPanel h3, #totpLogPanel h3, #emailChangeLogPanel h3, #qrPanel h3 { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    #logPanel h3 .btn, #retryLogPanel h3 .btn, #liveLogPanel h3 .btn, #totpLogPanel h3 .btn, #emailChangeLogPanel h3 .btn, #qrPanel h3 .btn { margin-left:auto; float:none !important; }
+    #logPanel .log, #retryLogPanel .log, #liveLogPanel .log, #totpLogPanel .log, #emailChangeLogPanel .log { max-height: calc(min(760px, calc(100vh - 48px)) - 74px); margin-top:0; }
+    #qrPanel img { display:block; max-width:min(360px, calc(100vw - 96px)); max-height:420px; margin:12px auto; border:1px solid var(--line); border-radius:10px; background: var(--surface); }
     #qrPanel .qr-link { display:block; word-break:break-all; white-space:normal; font-size:12px; color:var(--muted); margin-top:8px; }
     .hidden { display: none !important; }
     #toast {
@@ -339,7 +360,7 @@
       padding-bottom: 12px; border-bottom: 1px solid var(--line);
     }
     .config-tabs button {
-      border: 1px solid var(--line); background: var(--surface); color: #475467;
+      border: 1px solid var(--line); background: var(--surface); color: var(--text-2);
       border-radius: 999px; min-height: 34px; padding: 0 14px;
       cursor: pointer; font-weight: 800; font-size: 13px;
     }
@@ -357,7 +378,7 @@
     .config-subhead .remail-promo-notice {
       display: inline-flex; align-items: center; width: fit-content;
       margin: 0 0 0 10px; padding: 7px 11px;
-      color: #b42318; background: var(--surface)1f0; border: 1px solid #fecdca;
+      color: #b42318; background: var(--danger-soft); border: 1px solid #fecdca;
       border-radius: 7px; font-size: 12px; font-weight: 800; line-height: 1.4;
       vertical-align: middle; white-space: nowrap;
     }
@@ -366,7 +387,7 @@
       padding: 8px; border: 1px solid #edf1f5; border-radius: 8px; background: var(--soft-2);
     }
     .config-subtabs button {
-      border: 1px solid var(--line); background: var(--surface); color: #475467;
+      border: 1px solid var(--line); background: var(--surface); color: var(--text-2);
       border-radius: 999px; min-height: 30px; padding: 0 12px;
       cursor: pointer; font-weight: 800; font-size: 12px;
     }
@@ -406,7 +427,7 @@
     .config-recommendations-item a:hover { text-decoration: underline; }
     .config-count { opacity: .72; font-weight: 700; margin-left: 4px; }
     .roxy-workspace-box {
-      grid-column: 1 / -1; border: 1px solid #c3d4fb; background: #eef4ff;
+      grid-column: 1 / -1; border: 1px solid #c3d4fb; background: var(--primary-soft);
       border-radius: 8px; padding: 12px; display: grid; gap: 10px;
     }
     .roxy-workspace-box .row { align-items: flex-end; }
@@ -415,7 +436,7 @@
       min-height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid #9bbcff;
       background: var(--surface); color: var(--blue); text-decoration: none; font-size: 12px; font-weight: 800;
     }
-    .roxy-invite-link:hover { background: #e0ebff; }
+    .roxy-invite-link:hover { background: var(--primary-soft-2); }
 
     html[data-theme="dark"] {
       color-scheme: dark;
@@ -423,7 +444,7 @@
       --text: #e7ecf5; --muted: #8b95a8; --line: #2a3550; --line-2: #212b44; --line-strong: #3d4a68;
       --blue: #5a94ff; --green: #34d399; --red: #f87171; --amber: #fbbf24;
       --primary-soft: #1c2a4d; --primary-soft-2: #22345f; --primary-line: #33518f;
-      --danger-soft: #3b2027; --warning-soft: #3a2c10; --success-soft: #12312c;
+      --danger-soft: #3b2027; --warning-soft: #3a2c10; --success-soft: #12312c; --danger-line: #5b2830;
       --text-strong: #eef2f9; --text-2: #bfc9d9; --text-3: #8b95a8; --text-disabled: #64708a;
       --success-text: #4ade80; --warning-text: #fbbf24; --danger-text: #f87171;
       --sidebar-accent: #8aa4ff; --sidebar-accent-soft: #1e2a4d;
@@ -588,6 +609,7 @@
           <div class="btn-group">
             <span class="btn-group-title">批量</span>
             <button class="btn primary" id="btnSetupSelectedTotp" disabled title="给选中的账号批量开启 2FA，并在完成后写回 TOTP 密钥">批量开2FA</button>
+            <button class="btn primary" id="btnChangeSelectedEmails" disabled title="为选中的账号从指定来源领取新邮箱并换绑">批量换邮箱</button>
             <button class="btn good" id="btnNoteSelectedAccounts" disabled title="给选中的账号统一设置备注，留空可清空备注">备注</button>
             <button class="btn good" id="btnCopySelectedLines" disabled title="复制选中账号的完整整行，每个账号一行">复制行</button>
             <button class="btn good" id="btnCopySelectedTokens" disabled title="复制选中账号的 Token，每个账号一行">复制Token</button>
@@ -631,6 +653,12 @@
         </h3>
         <div class="log" id="totpLogContent">加载中…</div>
       </div>
+      <div class="body hidden" id="emailChangeLogPanel">
+        <h3>换绑日志：<span id="emailChangeLogAccount" style="font-size:13px;font-weight:400;color:var(--muted);"></span>
+          <button class="btn" id="btnCloseEmailChangeLog" style="float:right;min-height:28px;">关闭</button>
+        </h3>
+        <div class="log" id="emailChangeLogContent">加载中…</div>
+      </div>
     </section>
   </div>
 
@@ -649,16 +677,16 @@
         </div>
       </div>
       <div class="body" style="display:flex;gap:14px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line);">
-        <div class="stat" style="background:#eef4ff;border-color:#c3d4fb;color:#1d4ed8;min-width:110px;padding:8px 12px;border-radius:6px;border:1px solid;">
-          <span style="font-size:11px;color:#475467;">总数</span>
+        <div class="stat" style="background:var(--primary-soft);border-color:var(--primary-line);color:var(--blue);min-width:110px;padding:8px 12px;border-radius:6px;border:1px solid;">
+          <span style="font-size:11px;color:var(--text-2);">总数</span>
           <strong id="codexStatTotal" style="display:block;font-size:18px;margin-top:3px;">0</strong>
         </div>
-        <div class="stat" style="background:#e9f7ef;border-color:#a7d4bc;color:#166534;min-width:110px;padding:8px 12px;border-radius:6px;border:1px solid;">
-          <span style="font-size:11px;color:#475467;">已导出</span>
+        <div class="stat" style="background:var(--success-soft);border-color:var(--line);color:var(--success-text);min-width:110px;padding:8px 12px;border-radius:6px;border:1px solid;">
+          <span style="font-size:11px;color:var(--text-2);">已导出</span>
           <strong id="codexStatExported" style="display:block;font-size:18px;margin-top:3px;">0</strong>
         </div>
-        <div class="stat" style="background:#fff7e6;border-color:#f3d99b;color:#92600a;min-width:110px;padding:8px 12px;border-radius:6px;border:1px solid;">
-          <span style="font-size:11px;color:#475467;">未导出</span>
+        <div class="stat" style="background:var(--warning-soft);border-color:var(--line);color:var(--warning-text);min-width:110px;padding:8px 12px;border-radius:6px;border:1px solid;">
+          <span style="font-size:11px;color:var(--text-2);">未导出</span>
           <strong id="codexStatPending" style="display:block;font-size:18px;margin-top:3px;">0</strong>
         </div>
       </div>
@@ -1033,7 +1061,7 @@ async function refreshJobs() {
 
 let modalScrollY = 0;
 function updateModalScrollLock() {
-  const opened = !$('#logPanel').classList.contains('hidden') || !$('#retryLogPanel').classList.contains('hidden') || !$('#liveLogPanel').classList.contains('hidden') || !$('#qrPanel').classList.contains('hidden');
+  const opened = !$('#logPanel').classList.contains('hidden') || !$('#retryLogPanel').classList.contains('hidden') || !$('#liveLogPanel').classList.contains('hidden') || !$('#totpLogPanel').classList.contains('hidden') || !$('#emailChangeLogPanel').classList.contains('hidden') || !$('#qrPanel').classList.contains('hidden');
   const locked = document.body.classList.contains('modal-open');
   if (opened && !locked) {
     modalScrollY = window.scrollY || document.documentElement.scrollTop || 0;
@@ -1575,7 +1603,7 @@ function renderAccounts() {
     <tr>
       <td><input type="checkbox" class="account-row-check" data-account-id="${esc(r.id)}" ${ACCOUNT_SELECTED.has(Number(r.id)) ? 'checked' : ''}></td>
       <td class="muted">#${esc(r.id)}</td>
-      <td><div class="main-cell">${esc(r.email)}${r.archived ? ' <span class="pill status-used" title="该账号已归档">归档</span>' : ''}</div><div class="sub-cell">${esc(r.user_name || '-')}</div></td>
+      <td class="account-email-cell" title="${esc(r.email || '-')}${r.original_email ? `\n原邮箱: ${esc(r.original_email)}` : ''}\n${esc(r.user_name || '-')}"><div class="main-cell">${esc(r.email)}${r.archived ? ' <span class="pill status-used" title="该账号已归档">归档</span>' : ''}</div>${r.original_email ? `<div class="account-email-history">原邮箱: ${esc(r.original_email)}</div>` : ''}<div class="account-email-user">${esc(r.user_name || '-')}</div>${['queued','running'].includes(r.email_change_status) ? '<div class="account-email-status">换绑中</div>' : (r.email_change_status === 'failed' ? '<div class="account-email-status">换绑失败</div>' : '')}</td>
       <td>${esc(r.email_source || '-')}</td>
       <td><span class="mono" title="列表仅显示预览，完整 Token 请点复制">${r.has_access_token ? '有Token' : '<span class="muted">无Token</span>'}</span>${_liveStatusSub(r)}</td>
       <td>${r.password ? `<span class="mono" title="${esc(r.password)}">${esc(short(r.password, 18))}</span>` : '<span class="muted">-</span>'}</td>
@@ -1587,7 +1615,7 @@ function renderAccounts() {
       <td class="actions actions-cell">
         <div class="account-row-actions">
           <div class="account-action-group"><button class="primary" data-account-copy-secret="access_token" data-account-id="${esc(r.id)}" ${r.has_access_token ? '' : 'disabled'}>复制Token</button> <button class="good" data-account-copy-secret="copy_line" data-account-id="${esc(r.id)}">复制整行</button></div>
-          <div class="account-action-group"><button data-account-note="${esc(r.id)}" title="设置/清空该账号备注">备注</button> <button data-account-live-check="${esc(r.id)}" title="重新登录该账号，成功则刷新最新 AT/accessToken">查活</button> <button data-account-live-log="${esc(r.email)}" title="查看该账号最近一次查活日志">查活日志</button> <button data-account-totp-log="${esc(r.email)}" title="查看该账号最近一次 2FA 设置日志">2FA日志</button> ${_planAction(r)} ${_extractLinkAction(r)}</div>
+          <div class="account-action-group"><button data-account-note="${esc(r.id)}" title="设置/清空该账号备注">备注</button> <button data-account-change-email="${esc(r.id)}">换绑邮箱</button> <button data-account-change-email-log="${esc(r.id)}">换绑日志</button> <button data-account-live-check="${esc(r.id)}" title="重新登录该账号，成功则刷新最新 AT/accessToken">查活</button> <button data-account-live-log="${esc(r.email)}" title="查看该账号最近一次查活日志">查活日志</button> <button data-account-totp-log="${esc(r.email)}" title="查看该账号最近一次 2FA 设置日志">2FA日志</button> ${_planAction(r)} ${_extractLinkAction(r)}</div>
           <div class="account-action-group">${_codexAction(r)} <button data-codex-log="${esc(r.email)}" title="查看该账号最近一次 Codex 补跑日志">补跑日志</button></div>
           <div class="account-action-group danger-zone"><button data-account-archive="${esc(r.id)}" data-archived="${r.archived ? '0' : '1'}" title="${r.archived ? '恢复到默认账号列表' : '归档后默认账号列表不再显示'}">${r.archived ? '恢复' : '归档'}</button> <button class="danger" data-account-delete="${esc(r.id)}" data-email="${esc(r.email)}">删除</button></div>
         </div>
@@ -1611,6 +1639,7 @@ function updateAccountSelectionUi(pageRows = null) {
   const noteSelectedBtn = $('#btnNoteSelectedAccounts');
   const archiveSelectedBtn = $('#btnArchiveSelectedAccounts');
   const setupTotpBtn = $('#btnSetupSelectedTotp');
+  const changeEmailsBtn = $('#btnChangeSelectedEmails');
   if (hint) hint.textContent = `已选 ${ACCOUNT_SELECTED.size}`;
   if (bulkBtn) bulkBtn.disabled = ACCOUNT_SELECTED.size === 0;
   if (retryBulkBtn) retryBulkBtn.disabled = ACCOUNT_SELECTED.size === 0;
@@ -1623,6 +1652,7 @@ function updateAccountSelectionUi(pageRows = null) {
   if (downloadTxtBtn) downloadTxtBtn.disabled = ACCOUNT_SELECTED.size === 0;
   if (noteSelectedBtn) noteSelectedBtn.disabled = ACCOUNT_SELECTED.size === 0;
   if (setupTotpBtn) setupTotpBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (changeEmailsBtn) changeEmailsBtn.disabled = ACCOUNT_SELECTED.size === 0;
   if (archiveSelectedBtn) {
     archiveSelectedBtn.disabled = ACCOUNT_SELECTED.size === 0;
     archiveSelectedBtn.textContent = SHOW_ARCHIVED_ACCOUNTS ? '恢复选中' : '归档选中';
@@ -1735,6 +1765,38 @@ function closeTotpLogModal() {
 }
 $('#btnCloseTotpLog').addEventListener('click', closeTotpLogModal);
 
+let emailChangeLogAccountId = null, emailChangeLogTimer = null;
+function openEmailChangeLog(accountId) {
+  emailChangeLogAccountId = Number(accountId);
+  $('#emailChangeLogAccount').textContent = `账号 #${emailChangeLogAccountId}`;
+  $('#emailChangeLogPanel').classList.remove('hidden');
+  $('#emailChangeLogContent').textContent = '加载中…';
+  updateModalScrollLock();
+  pollEmailChangeLog();
+  clearInterval(emailChangeLogTimer);
+  emailChangeLogTimer = setInterval(pollEmailChangeLog, 3000);
+}
+async function pollEmailChangeLog() {
+  if (!emailChangeLogAccountId) return;
+  try {
+    const r = await api(`/api/accounts/${encodeURIComponent(emailChangeLogAccountId)}/change-email-log`);
+    const content = $('#emailChangeLogContent');
+    const atBottom = content.scrollTop + content.clientHeight >= content.scrollHeight - 30;
+    content.textContent = r.log || '(暂无换绑日志)';
+    $('#emailChangeLogAccount').textContent = `账号 #${emailChangeLogAccountId}${r.email ? ' · ' + r.email : ''}`;
+    if (atBottom) content.scrollTop = content.scrollHeight;
+    if (!r.running) clearInterval(emailChangeLogTimer);
+  } catch(e) {}
+}
+function closeEmailChangeLog() {
+  $('#emailChangeLogPanel').classList.add('hidden');
+  updateModalScrollLock();
+  clearInterval(emailChangeLogTimer);
+  emailChangeLogTimer = null;
+  emailChangeLogAccountId = null;
+}
+$('#btnCloseEmailChangeLog').addEventListener('click', closeEmailChangeLog);
+
 // 老 UI 查活兜底：捕获阶段直接拦截，避免被表格/按钮组其它事件吞掉。
 document.addEventListener('click', async (e) => {
   const bulkBtn = e.target.closest('[data-live-check-selected]');
@@ -1833,6 +1895,18 @@ $('#accountsBody').addEventListener('click', async (e) => {
   const noteBtn = e.target.closest('[data-account-note]');
   if (noteBtn) {
     await editAccountNote(Number(noteBtn.dataset.accountNote), noteBtn);
+    return;
+  }
+
+  const changeEmailBtn = e.target.closest('[data-account-change-email]');
+  if (changeEmailBtn) {
+    await changeAccountEmails([Number(changeEmailBtn.dataset.accountChangeEmail)]);
+    return;
+  }
+
+  const changeEmailLogBtn = e.target.closest('[data-account-change-email-log]');
+  if (changeEmailLogBtn) {
+    openEmailChangeLog(Number(changeEmailLogBtn.dataset.accountChangeEmailLog));
     return;
   }
 
@@ -1958,6 +2032,7 @@ $('#btnCopySelectedTokens').addEventListener('click', copySelectedAccountTokens)
 $('#btnDownloadSelectedTxt').addEventListener('click', downloadSelectedAccountTxt);
 $('#btnNoteSelectedAccounts').addEventListener('click', noteSelectedAccounts);
 $('#btnSetupSelectedTotp').addEventListener('click', setupSelectedTotp);
+$('#btnChangeSelectedEmails').addEventListener('click', () => changeAccountEmails(Array.from(ACCOUNT_SELECTED)));
 $('#btnExtractSelectedLinks').addEventListener('click', extractSelectedLinks);
 $('#btnRetrySelectedCodex').addEventListener('click', retrySelectedCodex);
 $('#btnDownloadSelectedCpa').addEventListener('click', downloadSelectedCpa);
@@ -2083,6 +2158,22 @@ async function setupAccountTotp(id, btn) {
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+async function changeAccountEmails(ids) {
+  ids = (ids || []).map(Number).filter(Boolean);
+  if (!ids.length) { showToast('请先选择账号'); return; }
+  const source = prompt('请输入新邮箱来源：\noutlook / generic_api / imap / cloudflare_domain / cloudflare / gptmail / mailnest / cloudmail / remail', 'outlook');
+  if (!source) return;
+  try {
+    const url = ids.length === 1 ? `/api/accounts/${ids[0]}/change-email` : '/api/accounts/change-email-bulk';
+    const body = ids.length === 1 ? {source:source.trim()} : {source:source.trim(), account_ids:ids};
+    const r = await api(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    ACCOUNT_SELECTED.clear();
+    showToast(ids.length === 1 ? '邮箱换绑任务已开始' : `已开始 ${r.started_count || 0} 个，跳过 ${(r.skipped || []).length} 个`);
+    loadAccounts();
+    const poll = setInterval(loadAccounts, 5000); setTimeout(() => clearInterval(poll), 10 * 60 * 1000);
+  } catch(e) { showToast('邮箱换绑失败: ' + e.message); }
 }
 
 async function setupSelectedTotp() {
@@ -2761,7 +2852,7 @@ function renderOutlook() {
         ${r.status !== 'failed'
           ? `<button data-pool-act="failed" data-email="${esc(r.email)}" data-source="${esc(r.source || $('#poolSource')?.value || 'all')}">标失败</button>`
           : ''}
-        <button data-pool-act="delete" data-email="${esc(r.email)}" data-source="${esc(r.source || $('#poolSource')?.value || 'all')}" style="border-color:#e7a3a0;color:#b3261e;">删除</button>
+        <button data-pool-act="delete" data-email="${esc(r.email)}" data-source="${esc(r.source || $('#poolSource')?.value || 'all')}" style="border-color:var(--danger-line);color:var(--danger-text);">删除</button>
       </td>
     </tr>`).join('') || '<tr><td colspan="8" class="muted">邮箱池为空</td></tr>';
   updateOutlookSelectionUi(rows);
