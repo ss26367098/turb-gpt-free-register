@@ -213,21 +213,17 @@ WebUI 配置页保存这些字段时会写入 `.env`（不是 config 源码）�
 
 ## 快速开始
 
-### WebUI 授权码
+### WebUI 授权码（可选）
 
-WebUI 启动后，除 `/login` 外所有页面和 `/api/*` 接口都会校验授权码。推荐在 `.env` 中配置：
+WebUI 默认**免登录**，启动后直接访问，无需授权码。
+
+如需加一层口令保护，任选其一：
 
 ```dotenv
 WEBUI_AUTH_CODE=你的授权码
 ```
 
-也可以启动时直接传入：
-
-```bash
-python web.py --auth-code 你的授权码
-```
-
-优先级：`--auth-code` > `.env`/环境变量。若都未设置，启动时会在日志中生成并打印本次临时授权码。接口调用可使用登录后的 Cookie，或传 `X-Auth-Code: <授权码>` / `Authorization: Bearer <授权码>`。
+或启动时传入 `python web.py --auth-code 你的授权码`。配置后除 `/login` 外所有页面和 `/api/*` 接口都会校验授权码。接口调用可使用登录后的 Cookie，或传 `X-Auth-Code: <授权码>` / `Authorization: Bearer <授权码>`。
 
 `WEBUI_SESSION_SECRET` 可选；未设置时会从固定授权码派生稳定的 Session 签名密钥，修改授权码后已有登录会自动失效。
 

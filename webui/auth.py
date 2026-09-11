@@ -6,7 +6,6 @@ import hmac
 import hashlib
 import logging
 import os
-import secrets
 from datetime import timedelta
 from typing import Any
 
@@ -18,10 +17,12 @@ AUTH_ENV_KEYS = ("WEBUI_AUTH_CODE", "AUTH_CODE", "WEB_AUTH_CODE")
 _SESSION_KEY = "webui_auth_ok"
 _AUTH_CODE: str | None = None
 _GENERATED = False
+# 未配置任何授权码时为 True：WebUI 完全免登录，不再生成临时授权码。
+AUTH_DISABLED = False
 
 def init_auth(app: Any, *, auth_code: str | None = None) -> str:
-    """初始化授权码和 Flask session。未显式配置时生成临时授权码。"""
-    global _AUTH_CODE, _GENERATED
+    """初始化授权码和 Flask session。未显式配置时直接关闭鉴权（免登录）。"""
+    global _AUTH_CODE, _GENERATED, AUTH_DISABLED
 
     code = (auth_code or "").strip()
     if not code:
@@ -39,10 +40,14 @@ def init_auth(app: Any, *, auth_code: str | None = None) -> str:
                     break
 
     if not code:
-        code = secrets.token_urlsafe(18)
-        _GENERATED = True
+        # 未配置授权码：关闭鉴权，访问不再需要登录。
+        _AUTH_CODE = None
+        _GENERATED = False
+        AUTH_DISABLED = True
+        code = ""
     else:
         _GENERATED = False
+        AUTH_DISABLED = False
 
     _AUTH_CODE = code
     session_secret = os.getenv("WEBUI_SESSION_SECRET") or os.getenv("FLASK_SECRET_KEY")
@@ -78,11 +83,15 @@ def _extract_auth_code() -> str:
 
 
 def code_is_valid(code: str) -> bool:
+    if AUTH_DISABLED:
+        return False
     expected = expected_auth_code()
     return bool(expected) and bool(code) and hmac.compare_digest(str(code), expected)
 
 
 def request_is_authorized() -> bool:
+    if AUTH_DISABLED:
+        return True
     if session.get(_SESSION_KEY) is True:
         return True
     return code_is_valid(_extract_auth_code())

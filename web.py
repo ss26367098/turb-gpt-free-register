@@ -19,7 +19,6 @@ from pathlib import Path
 from threading import Timer
 
 from webui.app import create_app
-from webui.auth import is_generated_code
 
 
 def _acquire_single_instance(port: int):
@@ -77,7 +76,7 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1", help="绑定地址，默认仅本地 127.0.0.1")
     parser.add_argument("--port", type=int, default=5000, help="端口，默认 5000")
     parser.add_argument("--open-browser", action="store_true", help="启动后自动打开浏览器")
-    parser.add_argument("--auth-code", default=None, help="WebUI 授权码；也可配置 .env: WEBUI_AUTH_CODE=...")
+    parser.add_argument("--auth-code", default=None, help="可选：启用 WebUI 授权码；不传则免登录。也可配置 .env: WEBUI_AUTH_CODE=...")
     parser.add_argument("--verbose", action="store_true", help="详细日志")
     args = parser.parse_args()
 
@@ -96,11 +95,11 @@ def main() -> None:
     app = create_app(auth_code=args.auth_code)
     url = f"http://{'127.0.0.1' if args.host in ('0.0.0.0', '::') else args.host}:{args.port}"
     logger.info(f"WebUI 已启动：{url}")
-    if is_generated_code():
-        from webui.auth import expected_auth_code
-        logger.warning("未配置 WEBUI_AUTH_CODE/AUTH_CODE，已生成本次临时授权码：%s", expected_auth_code())
+    from webui.auth import AUTH_DISABLED
+    if AUTH_DISABLED:
+        logger.info("未配置授权码，WebUI 免登录直接访问")
     if args.host in ("0.0.0.0", "::"):
-        logger.warning("已绑定到所有网卡，局域网内其他设备可访问。这是敏感工具，请确认网络环境可信。")
+        logger.warning("已绑定到所有网卡且无授权码保护，局域网内其他设备可访问。这是敏感工具，请确认网络环境可信。")
 
     # 默认不自动打开浏览器；需要时显式传 --open-browser
     if args.open_browser:
