@@ -9,6 +9,7 @@
 
 当前支持：
     - GrizzlySMS：GET 文本接口，文档 https://api.grizzlysms.com
+    - SMSBower：GET 文本接口（与 GrizzlySMS 同协议），文档 https://smsbower.app/api/?page=client
     - L：本地 JSON 管理接口，文档 L_API.md
     - H：本地 JSON 管理接口，文档 H_API.md
 
@@ -66,14 +67,21 @@ def _provider() -> str:
     return str(getattr(_cfg, "SMS_PROVIDER", "grizzly") or "grizzly").strip().lower()
 
 
+def _handler_api_base() -> str:
+    """grizzly / smsbower 共用 handler_api 文本协议，按通道取各自基址。"""
+    if _provider() == "smsbower":
+        return str(getattr(_cfg, "SMSBOWER_API_BASE", "") or "").strip() or "https://smsbower.page/stubs/handler_api.php"
+    return str(getattr(_cfg, "SMS_API_BASE", "") or "").strip()
+
+
 def _request_grizzly(http: CurlSession, params: dict) -> str:
     """
-    发一个 GrizzlySMS API 请求，返回去空白的响应文本。
+    发一个 GrizzlySMS/SMSBower handler_api 请求，返回去空白的响应文本。
     统一识别公共错误码并抛对应异常。
     """
     base_params = {"api_key": _cfg.SMS_API_KEY}
     base_params.update(params)
-    resp = http.get(_cfg.SMS_API_BASE, params=base_params)
+    resp = http.get(_handler_api_base(), params=base_params)
     if resp.status_code != 200:
         raise SmsProviderError(
             f"GrizzlySMS HTTP {resp.status_code}: {(resp.text or '')[:200]}"
@@ -551,7 +559,7 @@ def _do_cancel_sync(activation_id: str, http_factory) -> None:
         if elapsed < _MIN_CANCEL_DELAY:
             wait = _MIN_CANCEL_DELAY - elapsed
             logger.info(
-                f"[SMS] 取消等待 GrizzlySMS 2 分钟限制：activation_id={activation_id}，"
+                f"[SMS] 取消等待接码平台 2 分钟限制：activation_id={activation_id}，"
                 f"还需等 {wait:.0f}s..."
             )
             time.sleep(wait)

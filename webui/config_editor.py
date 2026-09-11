@@ -34,7 +34,7 @@ EDITABLE_FIELDS = [
     # ---- WebUI 授权 ----
     {
         "key": "WEBUI_AUTH_CODE", "file": "codex.py", "type": "str", "group": "WebUI 授权",
-        "label": "WebUI 授权码", "help": "仅保存在 .env（WEBUI_AUTH_CODE），避免出现在进程命令行中；保存后重启 WebUI 生效",
+        "label": "WebUI 授权码", "help": "留空 = 免登录直接访问（默认）；填写后仅保存在 .env（WEBUI_AUTH_CODE），重启 WebUI 生效",
         "storage": "env", "secret": True,
     },
     {
@@ -647,15 +647,15 @@ EDITABLE_FIELDS = [
 
     {
         "key": "SMS_PROVIDER", "file": "codex.py", "type": "str", "group": "接码平台",
-        "label": "接码通道", "help": "grizzly / l / h；l 使用 L_API.md，h 使用 H_API.md 定义的本地取号服务",
+        "label": "接码通道", "help": "grizzly / smsbower / l / h；smsbower 用 SMSBower（OpenAI 服务代码 dr）；l 使用 L_API.md，h 使用 H_API.md 定义的本地取号服务",
     },
     {
         "key": "SMS_COUNTRY", "file": "codex.py", "type": "str", "group": "接码平台",
-        "label": "国家代码", "help": "传给接码平台的 country；GrizzlySMS 常用：美国=187；H 通道作为 H_API.md 的 country",
+        "label": "国家代码", "help": "传给接码平台的 country；GrizzlySMS/SMSBower 常用：美国=187 印尼=6 菲律宾=4 印度=22；H 通道作为 H_API.md 的 country",
     },
     {
         "key": "SMS_SERVICE", "file": "codex.py", "type": "str", "group": "接码平台",
-        "label": "服务/项目代码", "help": "GrizzlySMS/L 作为 service；H 通道作为 H_API.md 的 projectId",
+        "label": "服务/项目代码", "help": "GrizzlySMS/L 作为 service；H 通道作为 H_API.md 的 projectId；注意 SMSBower 的 OpenAI(ChatGPT) 代码是 dr",
     },
     {
         "key": "SMS_MAX_RETRIES", "file": "codex.py", "type": "int", "group": "接码平台",
@@ -667,8 +667,16 @@ EDITABLE_FIELDS = [
     },
     {
         "key": "SMS_API_KEY", "file": "codex.py", "type": "str", "group": "接码平台",
-        "label": "GrizzlySMS API密钥", "help": "GrizzlySMS 平台 API Key，保存在 .env（SMS_API_KEY），不写回 config/*.py",
+        "label": "GrizzlySMS/SMSBower API密钥", "help": "GrizzlySMS 或 SMSBower 的平台 API Key，保存在 .env（SMS_API_KEY），不写回 config/*.py",
         "storage": "env", "secret": True,
+    },
+    {
+        "key": "SMS_API_BASE", "file": "codex.py", "type": "str", "group": "接码平台",
+        "label": "GrizzlySMS API地址", "help": "grizzly 通道的 handler_api 基址，默认 https://api.grizzlysms.com/stubs/handler_api.php；兼容同协议平台可改此地址",
+    },
+    {
+        "key": "SMSBOWER_API_BASE", "file": "codex.py", "type": "str", "group": "接码平台",
+        "label": "SMSBower API地址", "help": "smsbower 通道的 handler_api 基址，默认 https://smsbower.page/stubs/handler_api.php",
     },
     {
         "key": "H_API_BASE", "file": "codex.py", "type": "str", "group": "接码平台",
