@@ -82,11 +82,20 @@ def _request_grizzly(http: CurlSession, params: dict) -> str:
     base_params = {"api_key": _cfg.SMS_API_KEY}
     base_params.update(params)
     resp = http.get(_handler_api_base(), params=base_params)
+    text = (resp.text or "").strip()
+
+    # SMSBower 对无效/未授权 Key 不返回协议文本 BAD_KEY，而是 JSON（HTTP 401）：
+    #   {"status":0,"message":"No access","data":[]}
+    # 提前识别，给出可行动的错误提示，而不是落到"非预期响应"。
+    compact = text.replace(" ", "").lower()
+    if resp.status_code in (401, 403) or '"status":0' in compact or "no access" in compact:
+        raise SmsProviderError(
+            f"接码平台拒绝访问：API Key 无效/过期或未实名（SMS_PROVIDER={_provider()}, HTTP {resp.status_code}）{text[:120]}"
+        )
     if resp.status_code != 200:
         raise SmsProviderError(
-            f"GrizzlySMS HTTP {resp.status_code}: {(resp.text or '')[:200]}"
+            f"接码平台 HTTP {resp.status_code}: {text[:200]}"
         )
-    text = (resp.text or "").strip()
 
     # 公共错误码（任何 action 都可能返回）
     if text == "BAD_KEY":
