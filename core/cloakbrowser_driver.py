@@ -12,6 +12,27 @@ from config import cloakbrowser as _cfg
 
 logger = logging.getLogger(__name__)
 
+# Selenium Keys.* 是 Unicode 私有区字符，直接交给 Playwright 输入会变成乱码字面量，
+# 这里映射成 Playwright 的按键名，保证 Backspace/Enter/方向键等语义正确。
+_SELENIUM_KEY_MAP = {
+    "\ue003": "Backspace",
+    "\ue004": "Tab",
+    "\ue006": "Enter",
+    "\ue007": "Enter",
+    "\ue00d": " ",
+    "\ue010": "End",
+    "\ue011": "Home",
+    "\ue012": "ArrowLeft",
+    "\ue013": "ArrowUp",
+    "\ue014": "ArrowRight",
+    "\ue015": "ArrowDown",
+    "\ue017": "Delete",
+    "\ue008": "Shift",
+    "\ue00a": "Alt",
+    "\ue03d": "Meta",
+    "\ue009": "Control",
+}
+
 
 @dataclass
 class CloakOpenResult:
@@ -83,26 +104,62 @@ class CloakElement:
         except Exception:
             return ""
 
-    def send_keys(self, *values: str) -> None:
-        # 兼容 Selenium: el.send_keys(Keys.COMMAND, 'a')。
-        text = "".join(str(v or "") for v in values)
-        lower = text.lower()
+    def _is_focused(self) -> bool:
+        """判断元素当前是否已聚焦；重复点击会把光标重置到中间，导致追加输入串位。"""
+        try:
+            return bool(self._eval("el => el === document.activeElement"))
+        except Exception:
+            return False
+
+    def _ensure_focus(self) -> None:
+        if self._is_focused():
+            return
         try:
             self.click()
         except Exception:
             pass
+        try:
+            if self.tag_name in ("input", "textarea"):
+                # 光标可能在中间，移到末尾，保证追加语义与 Selenium 一致。
+                self.page.keyboard.press("End")
+        except Exception:
+            pass
+
+    def send_keys(self, *values: str) -> None:
+        # 兼容 Selenium: el.send_keys(Keys.COMMAND, 'a')。
+        text = "".join(str(v or "") for v in values)
+        lower = text.lower()
+        # 组合键：Keys.COMMAND/Keys.CONTROL 在 Selenium 里用于全选，这里按全选处理。
         if "\ue03d" in text or "\ue009" in text or "command" in lower or "control" in lower:
-            # Selenium Keys.CONTROL/COMMAND 编码可能传入私有区字符；这里按全选处理。
+            try:
+                self._ensure_focus()
+            except Exception:
+                pass
             try:
                 self.page.keyboard.press("Meta+A")
             except Exception:
                 self.page.keyboard.press("Control+A")
             return
+        # 单个功能键（Backspace/Enter/方向键等）：按真实按键发送。
+        special = _SELENIUM_KEY_MAP.get(text)
+        if special:
+            try:
+                self._ensure_focus()
+            except Exception:
+                pass
+            self.page.keyboard.press(special)
+            return
+        try:
+            self._ensure_focus()
+        except Exception:
+            pass
+        # Selenium 的 send_keys 是追加输入；不能用 fill（会整体替换，
+        # 逐字符调用时最终只剩最后一个字符，邮箱会被写成 "m"）。
         try:
             if self.locator is not None:
-                self.locator.fill(text, timeout=10000)
+                self.locator.press_sequentially(text, timeout=10000)
             else:
-                self.handle.fill(text, timeout=10000)
+                self.page.keyboard.type(text, delay=35)
         except Exception:
             self.page.keyboard.type(text, delay=35)
 
@@ -114,6 +171,19 @@ class CloakElement:
         except Exception:
             return None
 
+    @property
+    def text(self) -> str:
+        """Selenium 的元素可见文本；注册流程用它读按钮文案做兜底匹配。"""
+        try:
+            if self.locator is not None:
+                return str(self.locator.inner_text(timeout=2000) or "")
+            return str(self.handle.inner_text() or "")
+        except Exception:
+            try:
+                return str(self._eval("el => el.innerText || el.textContent || ''") or "")
+            except Exception:
+                return ""
+
 
 class _SwitchTo:
     def __init__(self, driver: "CloakSeleniumDriver"):
@@ -121,6 +191,12 @@ class _SwitchTo:
 
     def window(self, handle: str) -> None:
         self._driver._switch_window(handle)
+
+    @property
+    def active_element(self) -> "CloakElement":
+        """Selenium 的 driver.switch_to.active_element。"""
+        page = self._driver.page
+        return CloakElement(page, page.locator(":focus"))
 
 
 class CloakSeleniumDriver:
@@ -309,11 +385,34 @@ class CloakSeleniumDriver:
           const fn = new Function(...args.map((_, i) => 'a' + i), payload.script);
           return fn(...args);
         }"""
-        if first_el is not None:
-            handle = first_el._eval_handle(element_wrapper, {"script": script, "args": serial_args})
-        else:
-            handle = self.page.evaluate_handle(wrapper, {"script": script, "args": serial_args})
+        try:
+            if first_el is not None:
+                handle = first_el._eval_handle(element_wrapper, {"script": script, "args": serial_args})
+            else:
+                handle = self.page.evaluate_handle(wrapper, {"script": script, "args": serial_args})
+        except Exception as exc:
+            # 提交表单后页面会发生 SPA 导航，此时脚本的返回句柄依上下文已失效。
+            # 必须返回 None：调用方对“找不到元素”的既有处理就是重试或继续观察，
+            # 返回任何真值都会被当成元素（例如 _find_visible_email_input_js 的返回值）。
+            if _is_navigation_destroyed_error(exc):
+                logger.info("[Cloak] JS 执行期间页面发生跳转，按已跳转处理：%s", str(exc)[:160])
+                return None
+            raise
         return self._unwrap_js_result(self.page, handle)
+
+
+def _is_navigation_destroyed_error(exc: BaseException) -> bool:
+    """判断异常是否由“脚本执行期间页面导航”引起。
+
+    Playwright 在导航后会让旧执行上下文失效，抛 Execution context was destroyed
+    或 Target closed；这类错误在提交表单/跳转步骤里属于预期现象，不应中断流程。
+    """
+    msg = str(exc)
+    return (
+        "Execution context was destroyed" in msg
+        or "Target closed" in msg
+        or "most likely because of a navigation" in msg
+    )
 
 
 def _normalize_proxy(proxy: str | None) -> str | None:

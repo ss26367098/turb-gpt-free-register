@@ -197,6 +197,10 @@ def run_cloak_registration(
             "error": None if codex_ok else f"Codex 未完成: {codex_result.get('message')}",
         }
     except Exception as exc:
+        # 先记错误：下面的流量统计/浏览器清理都可能在浏览器异常退出时阻塞，
+        # 否则真正的失败原因会被清理逻辑吞掉，任务只剩 running。
+        logger.error("[Cloak注册] 失败：%s: %s", type(exc).__name__, exc)
+        logger.debug("[Cloak注册] 失败详情", exc_info=True)
         if traffic_tracker is not None:
             try:
                 network_traffic = traffic_tracker.stop()
@@ -204,8 +208,6 @@ def run_cloak_registration(
                 pass
         if data_saver is not None:
             data_saver.stop()
-        logger.error("[Cloak注册] 失败：%s: %s", type(exc).__name__, exc)
-        logger.debug("[Cloak注册] 失败详情", exc_info=True)
         try:
             if email:
                 from core.email_provider import release_email

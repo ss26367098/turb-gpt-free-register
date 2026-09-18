@@ -1091,6 +1091,12 @@ class PlaywrightTrafficTracker(_TrafficAccumulator):
                 accounted = key in self._accounted_requests
             if accounted:
                 continue
+            # 明细日志关闭时 _record_playwright_detail 是空操作，这里只需要计数。
+            # 不能顺手调 request.sizes()：那是 Playwright 通道往返，浏览器进程异常
+            # 退出时可能永远收不到回复，会让 stop() 永久阻塞、任务卡在 running。
+            if not self._detail_log_enabled:
+                unfinished += 1
+                continue
             try:
                 blocked = bool(self._data_saver and self._data_saver.was_playwright_blocked(request))
             except Exception:

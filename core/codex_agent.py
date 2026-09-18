@@ -44,7 +44,7 @@ AUTHAPI_BASE = "https://auth.openai.com/api/accounts"
 CHATGPT_BASE = "https://chatgpt.com"
 IMPERSONATE = "chrome"
 
-CHROME_VERSION = "146"
+CHROME_VERSION = "136"
 USER_AGENT = (
     f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     f"AppleWebKit/537.36 (KHTML, like Gecko) "
