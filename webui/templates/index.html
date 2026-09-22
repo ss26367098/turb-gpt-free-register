@@ -2035,6 +2035,152 @@
     .theme-icon-sun { display: none; }
     html[data-theme="dark"] .theme-icon-sun { display: inline-flex; }
     html[data-theme="dark"] .theme-icon-moon { display: none; }
+
+    /* ============ SMSBower ============ */
+    .smsbower-panel {
+      margin-top: 16px;
+      border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+      box-shadow: 0 0 12px rgba(0,0,0,.04);
+    }
+    .sb-head {
+      display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap;
+      padding: 20px 22px; border-bottom: 1px solid var(--line);
+    }
+    .sb-head-main { flex: 1 1 320px; min-width: 0; }
+    .sb-title { margin: 0; font-size: 22px; font-weight: 700; color: var(--text-strong); letter-spacing: -0.02em; }
+    .sb-subtitle { margin: 6px 0 0; font-size: 13px; color: var(--text-3); line-height: 1.6; }
+    .sb-balance {
+      display: flex; flex-direction: column; gap: 4px; align-items: flex-end;
+      padding: 12px 16px; border: 1px solid var(--line); border-radius: 8px;
+      background: var(--soft); min-width: 168px;
+    }
+    .sb-balance-label { font-size: 12px; color: var(--text-3); }
+    .sb-balance-value { font-size: 22px; font-weight: 700; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+    .sb-balance-value.is-bad { font-size: 14px; font-weight: 500; color: var(--danger-text); }
+    .sb-note {
+      display: none; margin: 0; padding: 12px 22px; font-size: 13px; line-height: 1.6;
+      border-bottom: 1px solid var(--line);
+    }
+    .sb-note.is-visible { display: block; }
+    .sb-note--warn { color: var(--warning-text); background: var(--warning-soft); }
+    .sb-note--error { color: var(--danger-text); background: var(--danger-soft); }
+    .sb-note--ok { color: var(--success-text); background: var(--success-soft); }
+
+    .sb-current {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 10px 22px; border-bottom: 1px solid var(--line);
+      background: var(--soft);
+    }
+    .sb-current-title {
+      font-size: 12px; color: var(--text-3); font-weight: 600; flex: 0 0 auto;
+    }
+    .sb-current-item {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px;
+      background: var(--surface); color: var(--text-2); font-size: 12px;
+      font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .sb-current-item b { color: var(--text-strong); font-weight: 600; }
+
+    .sb-controls {
+      display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+      padding: 14px 22px; border-bottom: 1px solid var(--line);
+    }
+    .sb-controls .sb-btn { margin-bottom: 0; }
+    .sb-check {
+      display: inline-flex; align-items: center; gap: 8px; height: 40px;
+      padding: 0 12px; border: 1px solid var(--line); border-radius: 6px;
+      background: var(--surface); color: var(--text-2); font-size: 13px;
+      cursor: pointer; user-select: none; white-space: nowrap; box-sizing: border-box;
+    }
+    .sb-check input { margin: 0; accent-color: #377DFF; }
+    .sb-hint { font-size: 12px; color: var(--text-3); align-self: center; padding-bottom: 2px; }
+    .sb-field { display: flex; flex-direction: column; gap: 6px; }
+    .sb-field-label { font-size: 12px; color: var(--text-3); }
+    .sb-field input {
+      height: 40px; width: 132px; padding: 0 12px; box-sizing: border-box;
+      border: 1px solid var(--line); border-radius: 6px; background: var(--surface);
+      color: var(--text); font: inherit; font-size: 14px;
+    }
+    .sb-field input:focus { outline: none; border-color: #377DFF; }
+    .sb-field #sbApiKey { width: 240px; }
+    .sb-field #sbSearch { width: 210px; }
+    .sb-controls .sb-spacer { flex: 1 1 auto; }
+    .sb-btn {
+      min-height: 40px; padding: 8px 18px; box-sizing: border-box;
+      border: 1px solid var(--line); border-radius: 6px; background: var(--surface);
+      color: var(--text-2); font: inherit; font-size: 14px; line-height: 1; cursor: pointer;
+      display: inline-flex; align-items: center; white-space: nowrap; transition: .1s;
+    }
+    .sb-btn:hover:not(:disabled) { color: #409eff; border-color: #c6e2ff; background: var(--primary-soft); }
+    .sb-btn:disabled { cursor: not-allowed; color: var(--text-disabled); border-color: var(--line-2); }
+    .sb-btn--primary { color: #fff; background: #377DFF; border-color: #377DFF; }
+    .sb-btn--primary:hover:not(:disabled) { background: #5a94ff; border-color: #5a94ff; color: #fff; }
+    .sb-btn--primary:disabled { color: #9CBFFF; background: var(--primary-soft); border-color: #D7E5FF; }
+
+    .sb-table-wrap { max-height: min(620px, 62vh); overflow: auto; }
+    table.sb-table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; }
+    table.sb-table th {
+      position: sticky; top: 0; z-index: 2;
+      padding: 12px 16px; text-align: left; white-space: nowrap;
+      background: var(--soft); color: var(--text-2); font-weight: 600; font-size: 13px;
+      border-bottom: 1px solid var(--line);
+    }
+    table.sb-table th:nth-child(1) { width: 44px; }
+    table.sb-table th:nth-child(3) { width: 130px; text-align: right; }
+    table.sb-table th:nth-child(4) { width: 110px; text-align: right; }
+    table.sb-table th:nth-child(5) { width: 110px; }
+    table.sb-table td { padding: 11px 16px; border-bottom: 1px solid var(--line-2); color: var(--text-2); vertical-align: middle; }
+    table.sb-table td:nth-child(3), table.sb-table td:nth-child(4) { text-align: right; }
+    table.sb-table tbody tr.sb-row { cursor: pointer; }
+    table.sb-table tbody tr.sb-row:hover { background: var(--soft); }
+    table.sb-table tbody tr.is-picked { background: var(--primary-soft); }
+    table.sb-table tbody tr.is-picked:hover { background: var(--primary-soft-2); }
+    .sb-row-caret { display: inline-block; width: 0; height: 0; margin-left: 6px; vertical-align: middle;
+      border-left: 4px solid transparent; border-right: 4px solid transparent;
+      border-top: 5px solid var(--text-3); transition: transform .12s; }
+    tr.is-expanded .sb-row-caret { transform: rotate(180deg); }
+    .sb-country { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .sb-country-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .sb-flag { font-size: 18px; line-height: 1; flex: 0 0 auto; }
+    .sb-country-name { color: var(--text-strong); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sb-country-code { color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sb-cost { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text-strong); }
+    .sb-cost--cheap { color: var(--success-text); }
+    .sb-cost--pricey { color: var(--warning-text); }
+    .sb-cost-suffix { font-size: 11px; font-weight: 400; color: var(--text-3); margin-left: 2px; }
+    .sb-stock { font-variant-numeric: tabular-nums; }
+    .sb-stock--zero { color: var(--text-disabled); }
+    .sb-badge {
+      display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
+      font-size: 12px; line-height: 1.6; background: var(--soft); color: var(--text-3);
+      border: 1px solid var(--line); white-space: nowrap;
+    }
+    .sb-badge--ok { color: var(--success-text); background: var(--success-soft); border-color: #b9dfc9; }
+    .sb-badge--warn { color: var(--warning-text); background: var(--warning-soft); border-color: #f0d9a8; }
+
+    /* 展开行：该国价格档位 */
+    .sb-tier-td { background: var(--soft); padding: 10px 16px 14px 70px !important; border-bottom: 1px solid var(--line) !important; }
+    .sb-tier-title { font-size: 12px; color: var(--text-3); margin: 0 0 8px; }
+    .sb-tier-list { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; }
+    .sb-tier {
+      display: inline-flex; flex-direction: column; gap: 2px; min-width: 108px;
+      padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px;
+      background: var(--surface); cursor: pointer; text-align: left;
+      font: inherit; transition: .1s; box-sizing: border-box;
+    }
+    .sb-tier:hover { border-color: #377DFF; background: var(--primary-soft); }
+    .sb-tier.is-cheapest { border-color: #b9dfc9; }
+    .sb-tier.is-picked { border-color: #377DFF; background: var(--primary-soft); box-shadow: 0 0 0 1px #377DFF inset; }
+    .sb-tier-price { font-size: 15px; font-weight: 600; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+    .sb-tier.is-cheapest .sb-tier-price { color: var(--success-text); }
+    .sb-tier-meta { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .sb-tier-empty { font-size: 13px; color: var(--text-3); }
+    .sb-empty { padding: 48px 22px; text-align: center; color: var(--text-3); font-size: 14px; }
+    .sb-foot {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 14px 22px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-3);
+    }
 </style>
 <script>(function(){try{var t=localStorage.getItem('theme');if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 </head>
@@ -2077,6 +2223,12 @@
         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/>
       </svg>
       <span class="sidebar-item-label">邮箱池</span>
+    </button>
+    <button type="button" data-tab="smsbower" class="sidebar-item">
+      <svg class="sidebar-item-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11 18h2"/>
+      </svg>
+      <span class="sidebar-item-label">SMSBower</span>
     </button>
     <button type="button" data-tab="config" class="sidebar-item">
       <svg class="sidebar-item-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -2508,6 +2660,92 @@
     </section>
   </div>
 
+  <!-- ============ SMSBower ============ -->
+  <div id="tab-smsbower" class="hidden">
+    <h1 class="register-title">SMSBower 接码</h1>
+    <section class="smsbower-panel" aria-label="SMSBower 国家与价格">
+      <div class="sb-head">
+        <div class="sb-head-main">
+          <h2 class="sb-title">国家 / 价格</h2>
+          <p class="sb-subtitle">
+            实时单价与库存来自 SMSBower <code>getPrices</code>，填好左侧 API Key 即可显示。
+            选中一行点「应用到配置」，会把「接码通道 / 国家代码 / 单号最高价」写入运行配置并热加载，
+            上方「取号时实际使用」一栏就是取号代码运行时读到的真实值。
+          </p>
+        </div>
+        <div class="sb-balance">
+          <span class="sb-balance-label">账户余额</span>
+          <span class="sb-balance-value" id="sbBalanceValue">—</span>
+        </div>
+      </div>
+
+      <p class="sb-note" id="sbNote"></p>
+
+      <div class="sb-current" id="sbCurrent" aria-label="当前生效的接码配置">
+        <span class="sb-current-title">取号时实际使用</span>
+        <span class="sb-current-item" id="sbCurProvider">通道 —</span>
+        <span class="sb-current-item" id="sbCurCountry">国家 —</span>
+        <span class="sb-current-item" id="sbCurService">服务 —</span>
+        <span class="sb-current-item" id="sbCurPrice">最高价 —</span>
+        <span class="sb-current-item" id="sbCurKey">Key —</span>
+      </div>
+
+      <div class="sb-controls">
+        <div class="sb-field">
+          <label class="sb-field-label" for="sbApiKey">SMSBower API Key</label>
+          <input id="sbApiKey" type="password" placeholder="粘贴 Key，仅存本机 .env" autocomplete="off"
+                 title="在 SMSBower 个人中心获取；保存在 .env 的 SMSBOWER_API_KEY，不影响 GrizzlySMS 的 Key">
+        </div>
+        <button type="button" class="sb-btn" id="sbSaveKey">保存 Key</button>
+        <button type="button" class="sb-btn" id="sbRefresh">刷新价格</button>
+        <span class="sb-spacer"></span>
+        <div class="sb-field">
+          <label class="sb-field-label" for="sbSearch">搜索</label>
+          <input id="sbSearch" type="search" placeholder="支持中文 / ISO / 代码" autocomplete="off" spellcheck="false">
+        </div>
+        <label class="sb-check" for="sbInStockOnly">
+          <input type="checkbox" id="sbInStockOnly" checked> 仅显示有库存
+        </label>
+      </div>
+
+      <div class="sb-controls">
+        <div class="sb-field">
+          <label class="sb-field-label" for="sbService">服务代码</label>
+          <input id="sbService" type="text" value="dr" autocomplete="off" spellcheck="false" title="OpenAI(ChatGPT) 在 SMSBower 的代码是 dr">
+        </div>
+        <div class="sb-field">
+          <label class="sb-field-label" for="sbMaxPrice">单号最高价 (USD)</label>
+          <input id="sbMaxPrice" type="text" placeholder="点国家行选择档位" autocomplete="off" spellcheck="false" title="留空表示不限价；点击国家行展开该国价格档位可一键填入">
+        </div>
+        <span class="sb-hint">点击国家行展开该国价格档位，再点档位即锁定该价</span>
+        <span class="sb-spacer"></span>
+        <button type="button" class="sb-btn sb-btn--primary" id="sbApply" disabled>应用到配置</button>
+      </div>
+
+      <div class="sb-table-wrap">
+        <table class="sb-table">
+          <colgroup>
+            <col><col><col><col><col>
+          </colgroup>
+          <thead>
+            <tr>
+              <th></th>
+              <th>国家 / 地区</th>
+              <th>单价 (USD)</th>
+              <th>库存</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody id="sbBody"></tbody>
+        </table>
+      </div>
+      <div class="sb-empty hidden" id="sbEmpty">暂无数据</div>
+      <div class="sb-foot">
+        <span id="sbCatalogMeta">—</span>
+      </div>
+    </section>
+  </div>
+
   <!-- ============ 配置 ============ -->
   <div id="tab-config" class="hidden">
     <div class="config-overview-v2" id="configOverviewV2" aria-label="配置概览">
@@ -2858,7 +3096,7 @@ function debounce(fn, wait=250) {
 
 // ---------- Tab 切换 ----------
 function activateTab(tab, persist=true) {
-  const allowed = ['register','accounts','codex','outlook','config'];
+  const allowed = ['register','accounts','codex','outlook','smsbower','config'];
   if (!allowed.includes(tab)) tab = 'register';
   $$('nav button').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
   allowed.forEach(t => $('#tab-'+t).classList.toggle('hidden', t !== tab));
@@ -2866,6 +3104,7 @@ function activateTab(tab, persist=true) {
   if (tab === 'accounts') loadAccounts();
   if (tab === 'codex') loadCodex();
   if (tab === 'outlook') loadOutlook();
+  if (tab === 'smsbower') loadSmsBower();
   if (tab === 'config') loadConfig();
   if (tab === 'register') refreshJobs();
 }
@@ -6568,12 +6807,18 @@ function renderConfigSectionV2(name, fields) {
       .map(k => fields.find(f => f.key === k))
       .filter(Boolean)
       .concat(fields.filter(f => !preferred.includes(f.key)));
+    // 这一组不全是开关：TWOFA_WORKERS / TWOFA_QUEUE_LIMIT 是整数，
+    // 一律按开关渲染会变成 checkbox，取值时 parseInt('on') 得到 NaN，
+    // 序列化成 null 后服务端 int(None) 抛错，整页保存一起 500。
+    const switches = ordered.filter(f => f.type === 'bool');
+    const inputs = ordered.filter(f => f.type !== 'bool');
     return `
       <section class="config-section-v2" id="${esc(slug)}" data-config-section="${esc(name)}">
         ${renderConfigSectionHead(name, '')}
         <div class="config-switches-v2">
-          ${ordered.map(f => renderFeatureSwitchField(f, { withIcon: true })).join('')}
+          ${switches.map(f => renderFeatureSwitchField(f, { withIcon: true })).join('')}
         </div>
+        ${inputs.length ? `<div class="config-section-v2-body">${inputs.map(renderConfigPlainFieldV2).join('')}</div>` : ''}
         <div class="config-section-v2-actions">
           <button type="button" class="btn primary" data-save-config-v2>保存</button>
         </div>
@@ -6805,8 +7050,10 @@ function readConfigElementValue(el, f) {
     if (el.type === 'checkbox') return !!el.checked;
     return el.value === 'true';
   }
-  if (f.type === 'int') return parseInt(el.value || '0', 10);
-  if (f.type === 'float') return parseFloat(el.value || '0');
+  // 数字字段若被渲染成复选框，el.value 是 'on'，parseInt 得到 NaN；
+  // NaN 经 JSON 变成 null，服务端会拒收——这里直接返回 undefined 让它走服务端默认。
+  if (f.type === 'int') { const n = parseInt(el.value, 10); return Number.isNaN(n) ? undefined : n; }
+  if (f.type === 'float') { const n = parseFloat(el.value); return Number.isNaN(n) ? undefined : n; }
   return isPlaceholderEmpty(el.value) ? '' : el.value.trim();
 }
 
@@ -6834,9 +7081,12 @@ async function saveConfigUpdates(triggerBtn) {
   buttons.forEach(btn => { btn.disabled = true; });
   try {
     const r = await api('/api/config', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({updates}) });
-    for (const [k, v] of Object.entries(updates)) { const f = CONFIG.find(x => x.key === k); if (f) f.value = v; delete CONFIG_PENDING_UPDATES[k]; }
+    const invalidKeys = Object.keys(r.invalid || {});
+    invalidKeys.forEach(k => { delete CONFIG_PENDING_UPDATES[k]; });
+    for (const [k, v] of Object.entries(updates)) { const f = CONFIG.find(x => x.key === k); if (f && !invalidKeys.includes(k)) f.value = v; delete CONFIG_PENDING_UPDATES[k]; }
     renderConfigLayoutV2();
-    showToast(r.reloaded ? '配置已生效' : '配置已保存（需重启）');
+    if (invalidKeys.length) showToast('部分字段未保存：' + invalidKeys.join('、'));
+    else showToast(r.reloaded ? '配置已生效' : '配置已保存（需重启）');
   } catch(e) { showToast('保存失败: ' + e.message); }
   finally { buttons.forEach(btn => { btn.disabled = false; }); }
 }
@@ -6852,6 +7102,389 @@ document.addEventListener('click', (e) => {
   if (!t) return;
   copyText(copyStore.get(t.dataset.copyId));
 });
+
+// ---------- SMSBower 国家 / 价格 ----------
+const SB = {
+  countries: [],
+  picked: '',
+  loaded: false,
+  busy: false,
+  pricesAvailable: false,
+  expanded: '',
+  tiers: {},
+  tierLoading: {},
+  pickedTier: {},
+};
+
+function sbSetNote(text, kind) {
+  const el = $('#sbNote');
+  if (!el) return;
+  el.className = 'sb-note' + (text ? ' is-visible' : '') + (kind ? ' sb-note--' + kind : '');
+  el.textContent = text || '';
+}
+
+function sbCostClass(cost) {
+  if (cost === null || cost === undefined) return '';
+  if (cost <= 0.1) return 'sb-cost--cheap';
+  if (cost >= 0.3) return 'sb-cost--pricey';
+  return '';
+}
+
+function sbRenderBalance(data) {
+  const el = $('#sbBalanceValue');
+  if (!el) return;
+  if (data && data.available) {
+    el.className = 'sb-balance-value';
+    el.textContent = '$' + Number(data.amount).toFixed(2);
+  } else {
+    el.className = 'sb-balance-value is-bad';
+    el.textContent = (data && data.message) || '不可用';
+  }
+}
+
+function sbVisibleRows() {
+  const q = ($('#sbSearch')?.value || '').trim().toLowerCase();
+  // 没有价格数据时「仅显示有库存」会把整张表清空，那种情况下忽略该开关。
+  const inStockOnly = SB.pricesAvailable && !!$('#sbInStockOnly')?.checked;
+  return SB.countries.filter(row => {
+    if (inStockOnly && !(row.stock > 0)) return false;
+    if (!q) return true;
+    return [row.name, row.name_zh, row.iso, row.code, row.prefix].some(v => String(v || '').toLowerCase().includes(q));
+  });
+}
+
+function sbFmtCount(n) {
+  if (n === null || n === undefined) return '—';
+  if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + ' 万';
+  return String(n);
+}
+
+function sbPickCountry(code) {
+  code = String(code);
+  if (SB.picked !== code) {
+    // 换国家后旧档位价不再适用：清掉档位选择，并用新国家的最低价预填上限。
+    SB.pickedTier = {};
+    const row = SB.countries.find(r => String(r.code) === code);
+    const input = $('#sbMaxPrice');
+    if (input && row && row.cost_text) input.value = row.cost_text;
+  }
+  SB.picked = code;
+  $('#sbApply').disabled = false;
+  sbRender();
+  sbLoadTiers(code);
+}
+
+async function sbLoadTiers(code) {
+  if (!SB.pricesAvailable || SB.tiers[code]) return;
+  SB.tierLoading[code] = true;
+  sbRender();
+  try {
+    const service = ($('#sbService')?.value || 'dr').trim() || 'dr';
+    const qs = new URLSearchParams({ country: code, service });
+    const data = await api('/api/smsbower/tiers?' + qs.toString());
+    SB.tiers[code] = data;
+  } catch (e) {
+    SB.tiers[code] = { available: false, message: '档位加载失败：' + e.message, tiers: [] };
+  } finally {
+    SB.tierLoading[code] = false;
+    sbRender();
+  }
+}
+
+function sbPickTier(code, tier) {
+  SB.pickedTier[code] = tier.price_text;
+  const input = $('#sbMaxPrice');
+  if (input) input.value = tier.price_text;
+  sbRender();
+}
+
+function sbRenderTierRow(row) {
+  const tr = document.createElement('tr');
+  const td = document.createElement('td');
+  td.colSpan = 5;
+  td.className = 'sb-tier-td';
+  const code = String(row.code);
+  const loading = SB.tierLoading[code];
+  const data = SB.tiers[code];
+
+  if (loading && !data) {
+    td.innerHTML = '<p class="sb-tier-title">正在查询该国的价格档位…</p>';
+  } else if (!data) {
+    td.innerHTML = '<p class="sb-tier-title">档位未加载</p>';
+  } else if (!data.available) {
+    const p = document.createElement('p');
+    p.className = 'sb-tier-title';
+    p.textContent = data.message || '该国暂无档位数据';
+    td.appendChild(p);
+  } else {
+    const tiers = data.tiers || [];
+    const title = document.createElement('p');
+    title.className = 'sb-tier-title';
+    title.textContent = `该国共 ${tiers.length} 个价格档位（按供应商），点击即锁定该价为单号最高价`;
+    td.appendChild(title);
+    if (!tiers.length) {
+      const empty = document.createElement('span');
+      empty.className = 'sb-tier-empty';
+      empty.textContent = '无可用档位';
+      td.appendChild(empty);
+    } else {
+      const list = document.createElement('div');
+      list.className = 'sb-tier-list';
+      const chosen = SB.pickedTier[code];
+      tiers.forEach((tier, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sb-tier'
+          + (idx === 0 ? ' is-cheapest' : '')
+          + (chosen === tier.price_text ? ' is-picked' : '');
+        const price = document.createElement('span');
+        price.className = 'sb-tier-price';
+        price.textContent = '$' + tier.price_text;
+        const meta = document.createElement('span');
+        meta.className = 'sb-tier-meta';
+        meta.textContent = (idx === 0 ? '最低 · ' : '') + `库存 ${sbFmtCount(tier.count)} · 供应商#${tier.provider_id}`;
+        btn.append(price, meta);
+        btn.addEventListener('click', ev => { ev.stopPropagation(); sbPickTier(code, tier); });
+        list.appendChild(btn);
+      });
+      td.appendChild(list);
+    }
+  }
+  tr.appendChild(td);
+  return tr;
+}
+
+function sbRender() {
+  const body = $('#sbBody');
+  const empty = $('#sbEmpty');
+  if (!body) return;
+  const rows = sbVisibleRows();
+  body.innerHTML = '';
+
+  if (!rows.length) {
+    empty.classList.remove('hidden');
+    empty.textContent = SB.countries.length
+      ? '没有符合筛选条件的国家'
+      : '暂无国家数据，可点「刷新价格」重试';
+  } else {
+    empty.classList.add('hidden');
+  }
+
+  const frag = document.createDocumentFragment();
+  for (const row of rows) {
+    const code = String(row.code);
+    const isPicked = code === String(SB.picked);
+    const tr = document.createElement('tr');
+    tr.className = 'sb-row';
+    if (isPicked) tr.classList.add('is-picked');
+    // 选中即展开档位；再点同一个国家则收起
+    if (isPicked && SB.expanded === code) tr.classList.add('is-expanded');
+    tr.addEventListener('click', () => {
+      if (isPicked && SB.expanded === code) {
+        SB.expanded = '';      // 收起
+      } else {
+        SB.expanded = code;   // 展开
+      }
+      sbPickCountry(code);
+    });
+
+    const pickTd = document.createElement('td');
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'sbPick';
+    radio.checked = isPicked;
+    radio.addEventListener('click', ev => ev.stopPropagation());
+    radio.addEventListener('change', () => sbPickCountry(code));
+    pickTd.appendChild(radio);
+
+    const nameTd = document.createElement('td');
+    const wrap = document.createElement('div');
+    wrap.className = 'sb-country';
+    const flag = document.createElement('span');
+    flag.className = 'sb-flag';
+    flag.textContent = row.flag || '🏳️';
+    const nm = document.createElement('span');
+    nm.className = 'sb-country-name';
+    // 中文优先，无映射（少数非标准 ISO 条目）时退回英文名。
+    nm.textContent = (row.name_zh ? `${row.name_zh} ${row.name}` : row.name);
+    const caret = document.createElement('span');
+    caret.className = 'sb-row-caret';
+    nm.appendChild(caret);
+    const cd = document.createElement('span');
+    cd.className = 'sb-country-code';
+    cd.textContent = `ISO ${row.iso || '-'} · 代码 ${row.code} · +${row.prefix || '-'}`;
+    const textBox = document.createElement('div');
+    textBox.className = 'sb-country-text';
+    textBox.append(nm, cd);
+    wrap.append(flag, textBox);
+    nameTd.appendChild(wrap);
+
+    const costTd = document.createElement('td');
+    if (row.cost === null || row.cost === undefined) {
+      costTd.textContent = '—';
+    } else {
+      const span = document.createElement('span');
+      span.className = 'sb-cost ' + sbCostClass(row.cost);
+      span.textContent = '$' + row.cost_text;
+      const suffix = document.createElement('span');
+      suffix.className = 'sb-cost-suffix';
+      suffix.textContent = '起';
+      span.appendChild(suffix);
+      costTd.appendChild(span);
+    }
+
+    const stockTd = document.createElement('td');
+    const stockSpan = document.createElement('span');
+    stockSpan.className = 'sb-stock' + ((row.stock || 0) > 0 ? '' : ' sb-stock--zero');
+    stockSpan.textContent = sbFmtCount(row.stock);
+    stockTd.appendChild(stockSpan);
+
+    const stateTd = document.createElement('td');
+    const badge = document.createElement('span');
+    if ((row.stock || 0) > 0) {
+      badge.className = 'sb-badge sb-badge--ok';
+      badge.textContent = '可接码';
+    } else if (row.cost !== null && row.cost !== undefined) {
+      badge.className = 'sb-badge sb-badge--warn';
+      badge.textContent = '无库存';
+    } else {
+      badge.className = 'sb-badge';
+      badge.textContent = '无报价';
+    }
+    stateTd.appendChild(badge);
+
+    tr.append(pickTd, nameTd, costTd, stockTd, stateTd);
+    frag.appendChild(tr);
+    if (isPicked && SB.expanded === code) {
+      frag.appendChild(sbRenderTierRow(row));
+    }
+  }
+  body.appendChild(frag);
+}
+
+function sbRenderCurrent(cur) {
+  if (!cur) return;
+  const providerNames = { smsbower: 'SMSBower', grizzly: 'GrizzlySMS', l: 'L 本地', h: 'H 本地' };
+  const set = (id, html) => { const el = $(id); if (el) el.innerHTML = html; };
+  set('#sbCurProvider', '通道 <b>' + (providerNames[cur.provider] || cur.provider || '默认') + '</b>');
+  const countryRow = SB.countries.find(r => String(r.code) === String(cur.country));
+  const countryText = cur.country
+    ? (countryRow ? `${countryRow.flag} ${countryRow.name_zh || countryRow.name} (${cur.country})` : cur.country)
+    : '默认';
+  set('#sbCurCountry', '国家 <b>' + countryText + '</b>');
+  const serviceText = cur.service_resolved === cur.service_raw
+    ? (cur.service_raw || '默认')
+    : `${cur.service_raw} → ${cur.service_resolved}`;
+  set('#sbCurService', '服务 <b>' + serviceText + '</b>');
+  set('#sbCurPrice', '单号最高价 <b>' + (cur.max_price ? '$' + cur.max_price : '不限') + '</b>');
+  set('#sbCurKey', 'Key <b>' + (cur.key_present
+    ? ('已配置 ****' + cur.key_hint + (cur.dedicated ? '（专属）' : '（共用）'))
+    : '未配置') + '</b>');
+}
+
+async function sbSaveKey() {
+  const input = $('#sbApiKey');
+  const btn = $('#sbSaveKey');
+  const value = (input?.value || '').trim();
+  if (!value) { sbSetNote('请先粘贴 SMSBower API Key', 'warn'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = '保存中…'; }
+  try {
+    await api('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ SMSBOWER_API_KEY: value }),
+    });
+    if (input) input.value = '';
+    sbSetNote('✅ SMSBower API Key 已保存到 .env 并热加载，正在刷新价格…', 'ok');
+    await loadSmsBower(true);
+  } catch (e) {
+    sbSetNote('保存 Key 失败：' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '保存 Key'; }
+  }
+}
+
+async function loadSmsBower(force) {
+  if (SB.busy) return;
+  SB.busy = true;
+  const btn = $('#sbRefresh');
+  if (btn) { btn.disabled = true; btn.textContent = '查询中…'; }
+  try {
+    const service = ($('#sbService')?.value || 'dr').trim() || 'dr';
+    const qs = new URLSearchParams({ service });
+    if (force) qs.set('force', '1');
+    const data = await api('/api/smsbower/overview?' + qs.toString());
+
+    SB.countries = data.countries || [];
+    SB.loaded = true;
+    SB.pricesAvailable = !!data.prices_available;
+    sbRender();
+    sbRenderCurrent(data.current);
+    sbRenderBalance(data.balance);
+
+    if (!data.ok) {
+      sbSetNote(data.catalog_error || '国家目录获取失败', 'error');
+    } else if (!data.prices_available) {
+      sbSetNote(data.prices_message || '未配置 API Key，价格不可用', 'warn');
+    } else if (data.service_resolved && data.service_resolved !== data.service_raw) {
+      sbSetNote(`服务代码已按平台映射：${data.service_raw} → ${data.service_resolved}`, 'ok');
+    } else {
+      sbSetNote('');
+    }
+
+    const meta = $('#sbCatalogMeta');
+    if (meta) {
+      const priced = SB.countries.filter(r => r.cost !== null && r.cost !== undefined).length;
+      meta.textContent = `共 ${SB.countries.length} 个国家 / 地区，其中 ${priced} 个有报价`
+        + (data.prices_fetched_at ? ` · 价格更新于 ${data.prices_fetched_at}` : '')
+        + (data.catalog_fetched_at ? ` · 目录缓存于 ${data.catalog_fetched_at}` : '');
+    }
+  } catch (e) {
+    sbSetNote('加载失败：' + e.message, 'error');
+  } finally {
+    SB.busy = false;
+    if (btn) { btn.disabled = false; btn.textContent = '刷新价格'; }
+  }
+}
+
+async function sbApply() {
+  if (!SB.picked) return;
+  const row = SB.countries.find(r => String(r.code) === String(SB.picked));
+  const btn = $('#sbApply');
+  if (btn) { btn.disabled = true; btn.textContent = '写入中…'; }
+  try {
+    const payload = {
+      country: String(SB.picked),
+      service: ($('#sbService')?.value || 'dr').trim() || 'dr',
+      max_price: ($('#sbMaxPrice')?.value || '').trim(),
+    };
+    const res = await api('/api/smsbower/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    // 先刷新回显再写提示，否则 loadSmsBower 里的 sbSetNote 会把成功消息清掉。
+    await loadSmsBower(true);
+    sbSetNote(
+      `已应用：${row ? (row.name_zh || row.name) : SB.picked}（国家代码 ${SB.picked}）`
+      + (payload.max_price ? `，单号最高价 $${payload.max_price}` : '，不限价')
+      + '，' + (res.note || '已保存'),
+      'ok'
+    );
+    loadSummary();
+  } catch (e) {
+    sbSetNote('应用失败：' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '应用到配置'; }
+  }
+}
+
+$('#sbRefresh')?.addEventListener('click', () => loadSmsBower(true));
+$('#sbSaveKey')?.addEventListener('click', sbSaveKey);
+$('#sbApply')?.addEventListener('click', sbApply);
+$('#sbSearch')?.addEventListener('input', sbRender);
+$('#sbInStockOnly')?.addEventListener('change', sbRender);
+$('#sbService')?.addEventListener('change', () => loadSmsBower(true));
 
 // ---------- 初始化 ----------
 loadSummary();

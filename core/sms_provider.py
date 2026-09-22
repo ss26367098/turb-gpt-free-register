@@ -74,12 +74,42 @@ def _handler_api_base() -> str:
     return str(getattr(_cfg, "SMS_API_BASE", "") or "").strip()
 
 
+# 各平台的服务代码并不通用：GrizzlySMS 用 openai，SMSBower 用 dr，
+# 配置页的默认值是 openai，直接透传会落到 SMSBower 的 BAD_SERVICE。
+_SERVICE_ALIASES = {
+    "smsbower": {
+        "openai": "dr",
+        "chatgpt": "dr",
+    },
+}
+
+
+def _resolve_service(raw: str | None = None) -> str:
+    """把配置里的服务代码翻译成当前平台认识的代码。"""
+    value = str(raw if raw is not None else getattr(_cfg, "SMS_SERVICE", "") or "").strip()
+    aliases = _SERVICE_ALIASES.get(_provider()) or {}
+    return aliases.get(value.lower(), value)
+
+
+def _api_key() -> str:
+    """取当前通道的 API Key。
+
+    SMSBower 有独立的 SMSBOWER_API_KEY（WebUI 的 SMSBower 页写入），
+    填了就优先用；没填才回退共用 SMS_API_KEY，兼容旧配置。
+    """
+    if _provider() == "smsbower":
+        dedicated = str(getattr(_cfg, "SMSBOWER_API_KEY", "") or "").strip()
+        if dedicated:
+            return dedicated
+    return str(getattr(_cfg, "SMS_API_KEY", "") or "").strip()
+
+
 def _request_grizzly(http: CurlSession, params: dict) -> str:
     """
     发一个 GrizzlySMS/SMSBower handler_api 请求，返回去空白的响应文本。
     统一识别公共错误码并抛对应异常。
     """
-    base_params = {"api_key": _cfg.SMS_API_KEY}
+    base_params = {"api_key": _api_key()}
     base_params.update(params)
     resp = http.get(_handler_api_base(), params=base_params)
     text = (resp.text or "").strip()
@@ -399,9 +429,16 @@ def acquire_number(
             )
             return activation_id, phone
 
+        raw_service = service or _cfg.SMS_SERVICE
+        resolved_service = _resolve_service(raw_service)
+        if resolved_service != str(raw_service).strip():
+            logger.info(
+                "[SMS] 服务代码已按平台映射：%s -> %s（SMS_PROVIDER=%s）",
+                raw_service, resolved_service, _provider(),
+            )
         params = {
             "action": "getNumber",
-            "service": service or _cfg.SMS_SERVICE,
+            "service": resolved_service,
             "country": country or _cfg.SMS_COUNTRY,
         }
         if _cfg.SMS_MAX_PRICE:

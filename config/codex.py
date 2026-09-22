@@ -110,6 +110,10 @@ SMSBOWER_API_BASE: str = "https://smsbower.page/stubs/handler_api.php"
 # 留空时 Codex 授权的手机验证步会失败；如不需要 Codex 自动授权，把 ENABLE_CODEX_AUTO=False。
 SMS_API_KEY: str = env_str("SMS_API_KEY", "")
 
+# SMSBower 专属 API Key（在 SMSBower 个人中心获取）。
+# 与 GrizzlySMS 的 Key 分开填写；smsbower 通道优先用它，留空时才回退 SMS_API_KEY。
+SMSBOWER_API_KEY: str = env_str("SMSBOWER_API_KEY", "")
+
 # 服务代码：OpenAI = "dr"
 SMS_SERVICE: str = "openai"
 
@@ -117,7 +121,8 @@ SMS_SERVICE: str = "openai"
 SMS_COUNTRY: str = "10"
 
 # 单个号愿意支付的最高价格（留空=不限）。透传给 getNumber 的 maxPrice。
-SMS_MAX_PRICE: str = ""
+# 注意：.env 白名单需要显式声明，否则 WebUI / .env 里填的值不会生效。
+SMS_MAX_PRICE: str = env_str("SMS_MAX_PRICE", "")
 
 # 一个号收不到短信/被拒时，换号重试的最大次数
 SMS_MAX_RETRIES: int = 10
@@ -166,4 +171,4 @@ L_ADMIN_AUTH_CODE: str = env_str("L_ADMIN_AUTH_CODE", "")
 L_PHONE_PREFIX: str = ""
 
 # ---- .env overrides for WebUI editable fields ----
-apply_env_overrides(globals(), {'ENABLE_CODEX_AUTO': 'bool', 'CODEX_OAUTH_DRIVER': 'str', 'CODEX_AUTH_URL_SOURCE': 'str', 'CPA_MANAGEMENT_URL': 'str', 'CPA_MANAGEMENT_KEY': 'str', 'CPA_REQUEST_TIMEOUT': 'int', 'CPA_CALLBACK_SUBMIT_RETRIES': 'int', 'CPA_CALLBACK_SUBMIT_RETRY_DELAY': 'int', 'CPA_SAVE_CALLBACK_RECEIPT': 'bool', 'SMS_PROVIDER': 'str', 'SMS_COUNTRY': 'str', 'SMS_SERVICE': 'str', 'SMS_MAX_RETRIES': 'int', 'SMS_CODE_WAIT': 'int', 'SMS_API_KEY': 'str', 'SMS_API_BASE': 'str', 'SMSBOWER_API_BASE': 'str', 'H_API_BASE': 'str', 'H_ADMIN_AUTH_CODE': 'str', 'H_PHONE_PREFIX': 'str', 'H_PHONE_ACQUIRE_MODE': 'str', 'L_API_BASE': 'str', 'L_ADMIN_AUTH_CODE': 'str', 'L_PHONE_PREFIX': 'str'})
+apply_env_overrides(globals(), {'ENABLE_CODEX_AUTO': 'bool', 'CODEX_OAUTH_DRIVER': 'str', 'CODEX_AUTH_URL_SOURCE': 'str', 'CPA_MANAGEMENT_URL': 'str', 'CPA_MANAGEMENT_KEY': 'str', 'CPA_REQUEST_TIMEOUT': 'int', 'CPA_CALLBACK_SUBMIT_RETRIES': 'int', 'CPA_CALLBACK_SUBMIT_RETRY_DELAY': 'int', 'CPA_SAVE_CALLBACK_RECEIPT': 'bool', 'SMS_PROVIDER': 'str', 'SMS_COUNTRY': 'str', 'SMS_SERVICE': 'str', 'SMS_MAX_RETRIES': 'int', 'SMS_CODE_WAIT': 'int', 'SMS_MAX_PRICE': 'str', 'SMS_API_KEY': 'str', 'SMSBOWER_API_KEY': 'str', 'SMS_API_BASE': 'str', 'SMSBOWER_API_BASE': 'str', 'H_API_BASE': 'str', 'H_ADMIN_AUTH_CODE': 'str', 'H_PHONE_PREFIX': 'str', 'H_PHONE_ACQUIRE_MODE': 'str', 'L_API_BASE': 'str', 'L_ADMIN_AUTH_CODE': 'str', 'L_PHONE_PREFIX': 'str'})

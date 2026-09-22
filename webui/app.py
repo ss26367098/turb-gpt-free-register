@@ -382,6 +382,117 @@ def create_app(auth_code: str | None = None) -> Flask:
         })
 
     # ----------------------------------------------------------
+    # SMSBower 国家 / 价格
+    # ----------------------------------------------------------
+    @app.get("/api/smsbower/overview")
+    def api_smsbower_overview():
+        """国家目录 + 实时价格 + 余额，供 SMSBower 页渲染。"""
+        try:
+            from core.smsbower_catalog import overview, balance
+            from config import codex as _codex_cfg
+            service = str(request.args.get("service") or _codex_cfg.SMS_SERVICE or "dr").strip()
+            # 与取号时保持同一套映射，避免这里查 openai、取号却发 dr。
+            from core.sms_provider import _resolve_service
+            resolved = _resolve_service(service)
+            force = str(request.args.get("force", "0")).lower() in ("1", "true", "yes")
+            data = overview(service=resolved, force=force)
+            data["service_raw"] = service
+            data["service_resolved"] = resolved
+            data["balance"] = balance()
+            # 回显“取号时真正会用的值”：这些就是 acquire_number() 运行时读的同一批配置，
+            # 前端展示出来让用户确认选择已生效，而不是只看表单里填了什么。
+            from core.sms_provider import _api_key as _sms_api_key
+            effective_key = _sms_api_key()
+            data["current"] = {
+                "provider": str(_codex_cfg.SMS_PROVIDER or "").strip(),
+                "country": str(_codex_cfg.SMS_COUNTRY or "").strip(),
+                "service_raw": str(_codex_cfg.SMS_SERVICE or "").strip(),
+                "service_resolved": resolved,
+                "max_price": str(getattr(_codex_cfg, "SMS_MAX_PRICE", "") or "").strip(),
+                "key_present": bool(effective_key),
+                # 只回显尾 4 位，避免完整 Key 泄到前端日志/截图里。
+                "key_hint": (effective_key[-4:] if len(effective_key) >= 4 else ""),
+                "dedicated_key": bool(str(getattr(_codex_cfg, "SMSBOWER_API_KEY", "") or "").strip()),
+            }
+            return jsonify(data)
+        except Exception as exc:
+            logger.exception("SMSBower 概览查询失败")
+            return jsonify({"ok": False, "error": f"{type(exc).__name__}: {exc}"}), 500
+
+    @app.get("/api/smsbower/balance")
+    def api_smsbower_balance():
+        try:
+            from core.smsbower_catalog import balance
+            return jsonify(balance())
+        except Exception as exc:
+            logger.exception("SMSBower 余额查询失败")
+            return jsonify({"available": False, "reason": "error", "message": f"{type(exc).__name__}: {exc}"}), 500
+
+    @app.get("/api/smsbower/tiers")
+    def api_smsbower_tiers():
+        """查询单个国家内的价格档位（按供应商拆分）。"""
+        try:
+            from core.smsbower_catalog import price_tiers
+            country = str(request.args.get("country") or "").strip()
+            service = str(request.args.get("service") or "dr").strip() or "dr"
+            from core.sms_provider import _resolve_service
+            force = str(request.args.get("force", "0")).lower() in ("1", "true", "yes")
+            return jsonify(price_tiers(country, service=_resolve_service(service), force=force))
+        except Exception as exc:
+            logger.exception("SMSBower 价格档位查询失败")
+            return jsonify({"available": False, "reason": "error",
+                            "message": f"{type(exc).__name__}: {exc}", "tiers": []}), 500
+
+    @app.post("/api/smsbower/apply")
+    def api_smsbower_apply():
+        """把选定国家/价格一键写入运行配置，省去在配置页手填。"""
+        data = request.get_json(silent=True) or {}
+        updates = {"SMS_PROVIDER": "smsbower"}
+
+        country = str(data.get("country") or "").strip()
+        if country:
+            updates["SMS_COUNTRY"] = country
+        service = str(data.get("service") or "").strip()
+        if service:
+            updates["SMS_SERVICE"] = service
+        if "max_price" in data:
+            raw_price = str(data.get("max_price") or "").strip()
+            if raw_price:
+                try:
+                    if float(raw_price) <= 0:
+                        return jsonify({"ok": False, "error": "最高价必须大于 0（留空表示不限价）"}), 400
+                except ValueError:
+                    return jsonify({"ok": False, "error": f"最高价不是合法数字：{raw_price}"}), 400
+            updates["SMS_MAX_PRICE"] = raw_price
+
+        try:
+            result = config_editor.update_config(updates)
+        except Exception as exc:
+            logger.exception("SMSBower 配置写入失败")
+            return jsonify({"ok": False, "error": f"{type(exc).__name__}: {exc}"}), 500
+
+        reload_ok = True
+        reload_err = ""
+        try:
+            import config as _config_pkg
+            _config_pkg.reload_all()
+        except Exception as exc:
+            reload_ok = False
+            reload_err = f"{type(exc).__name__}: {exc}"
+
+        return jsonify({
+            "ok": True,
+            "updated": result["updated"],
+            "ignored": result["ignored"],
+            "reloaded": reload_ok,
+            "note": (
+                "✅ 已写入并热加载"
+                if reload_ok
+                else f"⚠️ 已写入但热加载失败（{reload_err}），需重启 Web 服务"
+            ),
+        })
+
+    # ----------------------------------------------------------
     # 已注册账号
     # ----------------------------------------------------------
     @app.get("/api/accounts")
@@ -2962,6 +3073,8 @@ def create_app(auth_code: str | None = None) -> Flask:
             "ok": True,
             "updated": result["updated"],
             "ignored": result["ignored"],
+            "invalid": result.get("invalid", {}),
+            "env_updated": result.get("env_updated", []),
             "reloaded": reload_ok,
             "note": (
                 "✅ 已保存并热加载，新值立即生效"

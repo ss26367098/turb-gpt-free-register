@@ -682,8 +682,17 @@ EDITABLE_FIELDS = [
         "label": "单号等短信(秒)", "help": "单个号等待短信到达的最长秒数，超时则换号",
     },
     {
+        "key": "SMS_MAX_PRICE", "file": "codex.py", "type": "str", "group": "接码平台",
+        "label": "单号最高价(USD)", "help": "透传给 getNumber 的 maxPrice；留空=不限价，接受平台任意报价。建议配合 SMSBower 页的实时价格填一个上限",
+    },
+    {
         "key": "SMS_API_KEY", "file": "codex.py", "type": "str", "group": "接码平台",
-        "label": "GrizzlySMS/SMSBower API密钥", "help": "GrizzlySMS 或 SMSBower 的平台 API Key，保存在 .env（SMS_API_KEY），不写回 config/*.py",
+        "label": "GrizzlySMS API密钥", "help": "仅 grizzly 通道使用；SMSBower 请填下面专属的 SMSBower API密钥，两者互不影响",
+        "storage": "env", "secret": True,
+    },
+    {
+        "key": "SMSBOWER_API_KEY", "file": "codex.py", "type": "str", "group": "接码平台",
+        "label": "SMSBower API密钥", "help": "仅 smsbower 通道使用，在 SMSBower 个人中心获取；也可在「SMSBower」页直接填写保存",
         "storage": "env", "secret": True,
     },
     {
@@ -1017,10 +1026,14 @@ def _format_env_value(value, vtype: str) -> str:
         if isinstance(value, str):
             value = value.strip().lower() in ("true", "1", "yes", "on", "y")
         return "True" if value else "False"
-    if vtype == "int":
-        return str(int(value))
-    if vtype == "float":
-        return repr(float(value))
+    if vtype in ("int", "float"):
+        # 前端把数字字段渲染错成复选框时会送来 None；NaN/Inf 经 JSON 也会变成 None。
+        # 以前这里直接 int(None) 抛 TypeError，一个字段把整页保存带崩，报错还看不出是哪个 key。
+        if value is None or value != value:
+            raise ValueError(f"数值字段收到空值（{vtype}）：控件类型可能不匹配，未写入")
+        if isinstance(value, str) and not value.strip():
+            raise ValueError(f"数值字段收到空字符串（{vtype}），未写入")
+        return str(int(value)) if vtype == "int" else repr(float(value))
     if vtype == "list_str_multiline":
         lines = _normalize_config_value(value, vtype)
         return "\n".join(lines) if lines else "[]"
@@ -1033,7 +1046,7 @@ def update_config(updates: dict) -> dict:
     """批量更新配置。所有 WebUI 可编辑项只写项目根 `.env`。"""
     from config.env_loader import write_env_values, load_env
 
-    updated, ignored = [], []
+    updated, ignored, invalid = [], [], {}
     env_updates: dict[str, str] = {}
 
     for key, value in updates.items():
@@ -1041,12 +1054,16 @@ def update_config(updates: dict) -> dict:
         if field is None:
             ignored.append(key)
             continue
-        env_updates[key] = _format_env_value(value, field["type"])
+        # 单个字段格式不对时只跳过它，其余字段照常落盘，避免一个坏控件让整页保存失败。
+        try:
+            env_updates[key] = _format_env_value(value, field["type"])
+        except Exception as exc:
+            invalid[key] = f"{type(exc).__name__}: {exc}"
+            continue
         updated.append(key)
-
 
     env_updated = write_env_values(env_updates) if env_updates else []
     if env_updated:
         load_env(override=True)
 
-    return {"updated": updated, "ignored": ignored, "env_updated": env_updated}
+    return {"updated": updated, "ignored": ignored, "invalid": invalid, "env_updated": env_updated}
