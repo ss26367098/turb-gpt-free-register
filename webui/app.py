@@ -175,6 +175,13 @@ def _account_secret_value(row: dict, field: str) -> str:
     if field == "totp_code":
         secret = str(row.get("totp_secret") or "").strip()
         return pyotp.TOTP(secret).now() if secret else ""
+    if field == "login_credentials":
+        password = _account_secret_value(row, "password")
+        if password == "未设置":
+            password = ""
+        return "---".join((
+            str(row.get("email") or "").strip(), password, str(row.get("totp_secret") or "").strip(),
+        ))
     if field == "password":
         extra_raw = row.get("extra_json")
         extra = {}
@@ -186,7 +193,14 @@ def _account_secret_value(row: dict, field: str) -> str:
         elif isinstance(extra_raw, dict):
             extra = extra_raw
         return str(extra.get("registration_password") or row.get("registration_password") or "未设置")
-    raise ValueError("field 仅支持 access_token/copy_line/codex_agent_token/totp_secret/totp_code/password")
+    if field == "full_export":
+        try:
+            from core.db import _account_full_export_line
+
+            return str(_account_full_export_line(row) or "")
+        except Exception:
+            return ""
+    raise ValueError("field 仅支持 access_token/copy_line/codex_agent_token/totp_secret/totp_code/password/login_credentials/full_export")
 
 
 def _compact_job_for_list(row: dict) -> dict:
@@ -409,6 +423,7 @@ def create_app(auth_code: str | None = None) -> Flask:
                 "service_raw": str(_codex_cfg.SMS_SERVICE or "").strip(),
                 "service_resolved": resolved,
                 "max_price": str(getattr(_codex_cfg, "SMS_MAX_PRICE", "") or "").strip(),
+                "provider_ids": str(getattr(_codex_cfg, "SMSBOWER_PROVIDER_IDS", "") or "").strip(),
                 "key_present": bool(effective_key),
                 # 只回显尾 4 位，避免完整 Key 泄到前端日志/截图里。
                 "key_hint": (effective_key[-4:] if len(effective_key) >= 4 else ""),
@@ -464,6 +479,12 @@ def create_app(auth_code: str | None = None) -> Flask:
                 except ValueError:
                     return jsonify({"ok": False, "error": f"最高价不是合法数字：{raw_price}"}), 400
             updates["SMS_MAX_PRICE"] = raw_price
+        # 选中具体档位时把该档位的供应商一并锁定：maxPrice 只是价格上限，
+        # 平台仍可能在同价位的其它供应商里挑；providerIds 才是「只用这一档」。
+        # 未选档位则清空，避免上一次的选择残留。
+        if "provider_id" in data:
+            provider_id = str(data.get("provider_id") or "").strip()
+            updates["SMSBOWER_PROVIDER_IDS"] = provider_id
 
         try:
             result = config_editor.update_config(updates)

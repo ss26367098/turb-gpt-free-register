@@ -221,6 +221,10 @@ EDITABLE_FIELDS = [
         "label": "打开接口路径", "help": "默认 /browser/open；如 Roxy 版本不同可在此调整",
     },
     {
+        "key": "ROXY_CREATE_INTERVAL", "file": "roxybrowser.py", "type": "float", "group": "RoxyBrowser",
+        "label": "创建环境间隔", "help": "多线程时相邻 /browser/create 请求的最小间隔，默认 1.5 秒；设为 0 可关闭",
+    },
+    {
         "key": "ROXY_OPEN_HEADLESS", "file": "roxybrowser.py", "type": "bool", "group": "RoxyBrowser",
         "label": "无头启动窗口", "help": "打开 Roxy 环境时向 /browser/open 传 headless；False=显示窗口，True=无头启动",
     },
@@ -324,6 +328,11 @@ EDITABLE_FIELDS = [
     {
         "key": "OTP_POLL_INTERVAL", "file": "email.py", "type": "int", "group": "邮箱 / OTP",
         "label": "OTP 轮询间隔(秒)", "help": "每隔多少秒查一次新邮件",
+    },
+    {
+        "key": "GENERIC_API_PROXY", "file": "email.py", "type": "str", "group": "邮箱 / OTP",
+        "label": "通用 API 取码代理", "help": "仅用于 generic_api 接口取码；默认直接走本地 HTTP 代理 http://127.0.0.1:7897，不读取代理池，也不套用代理池上游链式；留空则直连",
+        "storage": "env",
     },
     {
         "key": "EMAIL_SOURCE", "file": "email.py", "type": "str", "group": "邮箱 / OTP",
@@ -550,13 +559,23 @@ EDITABLE_FIELDS = [
         ],
     },
     {
+        "key": "PROXY_POOL_UPSTREAM_PROXY", "file": "proxy.py", "type": "str", "group": "代理池",
+        "label": "代理池上游代理", "help": "可选；代理池每个目标代理通过此本地上游连接。留空则不链式。地址明文显示，仅保存到 .env",
+        "storage": "env",
+    },
+    {
         "key": "PLAN_CHECK_PROXY_MODE", "file": "proxy.py", "type": "str", "group": "代理池",
         "label": "套餐/Agent网络模式", "help": "用于查套餐和生成 Agent Token；auto=本地代理可用则走代理、未监听则直连；proxy=强制代理；direct=强制直连",
     },
     {
-        "key": "PLAN_CHECK_PROXY", "file": "proxy.py", "type": "str", "group": "代理池",
-        "label": "套餐/Agent专用代理", "help": "用于查套餐和生成 Agent Token；留空时 auto/proxy 从代理池选择。可能包含认证信息，仅保存到 .env",
+        "key": "PLAN_CHECK_PROXY", "file": "proxy.py", "type": "list_str_multiline", "group": "代理池",
+        "label": "套餐/Agent专用代理(每行一个)", "help": "用于查套餐、查活和生成 Agent Token；支持动态代理 URL，每行一条。仅保存到 .env",
         "storage": "env", "secret": True,
+    },
+    {
+        "key": "PLAN_CHECK_UPSTREAM_PROXY", "file": "proxy.py", "type": "str", "group": "代理池",
+        "label": "套餐/Agent本地上游代理", "help": "可选；仅用于套餐/Agent专用代理，形成“本地代理 -> 动态代理 -> ChatGPT”的代理链。留空则不链式。地址明文显示。仅保存到 .env",
+        "storage": "env",
     },
     {
         "key": "PLAN_CHECK_TIMEOUT", "file": "proxy.py", "type": "float", "group": "代理池",
@@ -663,15 +682,15 @@ EDITABLE_FIELDS = [
 
     {
         "key": "SMS_PROVIDER", "file": "codex.py", "type": "str", "group": "接码平台",
-        "label": "接码通道", "help": "grizzly / smsbower / l / h；smsbower 用 SMSBower（OpenAI 服务代码 dr）；l 使用 L_API.md，h 使用 H_API.md 定义的本地取号服务",
+        "label": "接码通道", "help": "grizzly / smsbower / l / h；smsbower 使用 SMSBower handler_api；l 使用 L_API.md，h 使用 H_API.md 定义的本地取号服务",
     },
     {
         "key": "SMS_COUNTRY", "file": "codex.py", "type": "str", "group": "接码平台",
-        "label": "国家代码", "help": "传给接码平台的 country；GrizzlySMS/SMSBower 常用：美国=187 印尼=6 菲律宾=4 印度=22；H 通道作为 H_API.md 的 country",
+        "label": "国家代码", "help": "传给接码平台的 country；SMSBower 按其国家表填写（建议用「SMSBower」页选国家后自动写入），GrizzlySMS 常用美国=187；H 通道作为 H_API.md 的 country",
     },
     {
         "key": "SMS_SERVICE", "file": "codex.py", "type": "str", "group": "接码平台",
-        "label": "服务/项目代码", "help": "GrizzlySMS/L 作为 service；H 通道作为 H_API.md 的 projectId；注意 SMSBower 的 OpenAI(ChatGPT) 代码是 dr",
+        "label": "服务/项目代码", "help": "GrizzlySMS/L/SMSBower 作为 service；SMSBower 的 OpenAI (ChatGPT) 推荐填 dr，填 openai/chatgpt 时程序会自动转换；H 通道作为 projectId",
     },
     {
         "key": "SMS_MAX_RETRIES", "file": "codex.py", "type": "int", "group": "接码平台",
@@ -691,8 +710,8 @@ EDITABLE_FIELDS = [
         "storage": "env", "secret": True,
     },
     {
-        "key": "SMSBOWER_API_KEY", "file": "codex.py", "type": "str", "group": "接码平台",
-        "label": "SMSBower API密钥", "help": "仅 smsbower 通道使用，在 SMSBower 个人中心获取；也可在「SMSBower」页直接填写保存",
+"key": "SMSBOWER_API_KEY", "file": "codex.py", "type": "str", "group": "接码平台",
+        "label": "SMSBower API密钥", "help": "SMSBower 控制台 API Key，保存在 .env，不写回 config/*.py；也可在「SMSBower」页直接填写保存",
         "storage": "env", "secret": True,
     },
     {
@@ -701,7 +720,27 @@ EDITABLE_FIELDS = [
     },
     {
         "key": "SMSBOWER_API_BASE", "file": "codex.py", "type": "str", "group": "接码平台",
-        "label": "SMSBower API地址", "help": "smsbower 通道的 handler_api 基址，默认 https://smsbower.page/stubs/handler_api.php",
+        "label": "SMSBower API 地址", "help": "默认 https://smsbower.page/stubs/handler_api.php",
+    },
+    {
+        "key": "SMSBOWER_USE_V2", "file": "codex.py", "type": "bool", "group": "接码平台",
+        "label": "SMSBower 使用V2取号", "help": "官方客户端文档使用 getNumber；通常保持关闭。仅在确认账号支持 getNumberV2 时开启",
+    },
+    {
+        "key": "SMSBOWER_PROVIDER_IDS", "file": "codex.py", "type": "str", "group": "接码平台",
+        "label": "SMSBower 供应商筛选", "help": "可选，供应商 ID 用逗号分隔；留空由平台自动选择。等价于在「SMSBower」页选中该国某个价格档位",
+    },
+    {
+        "key": "SMSBOWER_EXCEPT_PROVIDER_IDS", "file": "codex.py", "type": "str", "group": "接码平台",
+        "label": "SMSBower 排除供应商", "help": "可选，排除的供应商 ID 用逗号分隔",
+    },
+    {
+        "key": "SMSBOWER_PHONE_EXCEPTION", "file": "codex.py", "type": "str", "group": "接码平台",
+        "label": "SMSBower 排除号码前缀", "help": "可选，号码前缀用逗号分隔；用于避开已知不可用号段",
+    },
+    {
+        "key": "SMSBOWER_MIN_PRICE", "file": "codex.py", "type": "str", "group": "接码平台",
+        "label": "SMSBower 最低价格", "help": "可选，透传 minPrice；与最高价格一起限定号码价格区间",
     },
     {
         "key": "H_API_BASE", "file": "codex.py", "type": "str", "group": "接码平台",
@@ -1020,20 +1059,28 @@ def _atomic_write(path: Path, text: str) -> None:
     tmp.replace(path)
 
 
-def _format_env_value(value, vtype: str) -> str:
+def _format_env_value(value, vtype: str, fallback=None) -> str:
     """把前端值格式化成适合写入 .env 的字符串。"""
+    if value is None:
+        value = fallback
     if vtype == "bool":
         if isinstance(value, str):
             value = value.strip().lower() in ("true", "1", "yes", "on", "y")
         return "True" if value else "False"
     if vtype in ("int", "float"):
-        # 前端把数字字段渲染错成复选框时会送来 None；NaN/Inf 经 JSON 也会变成 None。
-        # 以前这里直接 int(None) 抛 TypeError，一个字段把整页保存带崩，报错还看不出是哪个 key。
+        # 前端把数字字段渲染错成复选框时会送来 None（NaN 经 JSON 序列化也会变成 None）；
+        # 这不是用户的输入意图，回退到当前生效值即可，不要因此报错。
         if value is None or value != value:
-            raise ValueError(f"数值字段收到空值（{vtype}）：控件类型可能不匹配，未写入")
+            value = fallback
+        # 空字符串是明确的坏输入（用户清空了数字框），拒绝并回报，避免静默写回旧值。
         if isinstance(value, str) and not value.strip():
-            raise ValueError(f"数值字段收到空字符串（{vtype}），未写入")
-        return str(int(value)) if vtype == "int" else repr(float(value))
+            raise ValueError(f"数值字段收到空字符串（{vtype}）")
+        try:
+            return str(int(value)) if vtype == "int" else repr(float(value))
+        except (TypeError, ValueError):
+            if fallback is None:
+                raise ValueError(f"数值字段无法解析（{vtype}）：{value!r}")
+            return str(int(fallback)) if vtype == "int" else repr(float(fallback))
     if vtype == "list_str_multiline":
         lines = _normalize_config_value(value, vtype)
         return "\n".join(lines) if lines else "[]"
@@ -1048,15 +1095,23 @@ def update_config(updates: dict) -> dict:
 
     updated, ignored, invalid = [], [], {}
     env_updates: dict[str, str] = {}
+    current_values = {
+        item["key"]: item.get("value")
+        for item in get_config()
+    }
 
     for key, value in updates.items():
         field = _FIELD_BY_KEY.get(key)
         if field is None:
             ignored.append(key)
             continue
-        # 单个字段格式不对时只跳过它，其余字段照常落盘，避免一个坏控件让整页保存失败。
+# 单个字段格式不对时只跳过它，其余字段照常落盘，避免一个坏控件让整页保存失败。
         try:
-            env_updates[key] = _format_env_value(value, field["type"])
+            env_updates[key] = _format_env_value(
+                value,
+                field["type"],
+                fallback=current_values.get(key),
+            )
         except Exception as exc:
             invalid[key] = f"{type(exc).__name__}: {exc}"
             continue
