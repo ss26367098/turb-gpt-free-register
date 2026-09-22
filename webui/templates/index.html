@@ -7445,7 +7445,7 @@ function sbRenderCurrent(cur) {
   set('#sbCurPrice', '单号最高价 <b>' + (cur.max_price ? '$' + cur.max_price : '不限')
     + (cur.provider_ids ? ' · 供应商#' + cur.provider_ids : '') + '</b>');
   set('#sbCurKey', 'Key <b>' + (cur.key_present
-    ? ('已配置 ****' + cur.key_hint + (cur.dedicated ? '（专属）' : '（共用）'))
+    ? ('已配置 ****' + cur.key_hint + (cur.dedicated_key ? '（专属）' : '（共用）'))
     : '未配置') + '</b>');
 }
 
