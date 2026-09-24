@@ -1575,7 +1575,7 @@
     .outlook-panel-v2 .jobs-v2-pager { border-top: 1px solid var(--line); }
 
     /* ---- 邮箱池导入弹窗 ---- */
-    #outlookImportModal:not(.hidden), #emailChangeModalV2:not(.hidden) {
+    #outlookImportModal:not(.hidden), #emailChangeModalV2:not(.hidden), #accountDeleteModal:not(.hidden) {
       position: fixed; inset: 0; z-index: 1200;
       display: flex; align-items: center; justify-content: center;
       padding: 24px; box-sizing: border-box;
@@ -2864,6 +2864,28 @@
     <div class="outlook-import-foot"><button type="button" class="jobs-tb-btn" id="btnCancelEmailChangeV2">取消</button><button type="button" class="jobs-tb-btn jobs-tb-btn--primary" id="btnSubmitEmailChangeV2">开始换绑</button></div>
   </div>
 </div>
+<div id="accountDeleteModal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="accDelTitleV2">
+  <div class="outlook-import-dialog" role="document" style="max-width:480px;">
+    <div class="outlook-import-head">
+      <div class="outlook-import-head-main">
+        <h3 id="accDelTitleV2">删除账号</h3>
+        <p id="accDelHintV2">会从本地账号列表、注册成功邮箱和 token 文件中移除。</p>
+      </div>
+      <button type="button" class="outlook-import-close" id="btnCloseAccDelV2" aria-label="关闭">×</button>
+    </div>
+    <div class="outlook-import-body">
+      <label class="outlook-import-field" id="accDelCpaRowV2" style="flex-direction:row;align-items:center;gap:10px;">
+        <input type="checkbox" id="accDelCpaV2" style="width:16px;height:16px;margin:0;">
+        <span style="font-weight:600;">同时从 CPA 删除该账号的 Codex 凭证</span>
+      </label>
+      <div class="banner warn" id="accDelCpaWarnV2">按邮箱在 CPA auth-files 中匹配并删除 Codex 凭证文件。CPA 侧删除不可恢复，请确认。</div>
+    </div>
+    <div class="outlook-import-foot">
+      <button type="button" class="jobs-tb-btn" id="btnCancelAccDelV2">取消</button>
+      <button type="button" class="jobs-tb-btn jobs-tb-btn--danger" id="btnConfirmAccDelV2">删除</button>
+    </div>
+  </div>
+</div>
 <div class="body hidden" id="logPanel">
   <h3>任务 #<span id="logJobId"></span> 日志 <button class="btn" id="btnCloseLog" style="float:right;min-height:28px;">关闭</button></h3>
   <div class="log" id="logContent">加载中…</div>
@@ -3341,7 +3363,8 @@ function updateModalScrollLock() {
     || !$('#emailChangeLogPanel').classList.contains('hidden')
     || !$('#qrPanel').classList.contains('hidden')
     || !$('#outlookImportModal').classList.contains('hidden')
-    || !$('#emailChangeModalV2').classList.contains('hidden');
+    || !$('#emailChangeModalV2').classList.contains('hidden')
+    || !$('#accountDeleteModal').classList.contains('hidden');
   const locked = document.body.classList.contains('modal-open');
   if (opened && !locked) {
     modalScrollY = window.scrollY || document.documentElement.scrollTop || 0;
@@ -5142,13 +5165,64 @@ async function checkSelectedLive(idsArg = null, btnArg = null) {
   }
 }
 
+// ---------- 删除账号确认弹窗（带「同时从 CPA 删除」勾选框） ----------
+let _accDelResolve = null;
+let _cpaConfiguredCache = null;
+
+async function cpaConfigured() {
+  // 删除弹窗每次打开前查一次；CPA 没配置就不显示勾选框，避免误勾。
+  if (_cpaConfiguredCache === null) {
+    try { _cpaConfiguredCache = !!(await api('/api/cpa/status')).configured; }
+    catch (e) { _cpaConfiguredCache = false; }
+  }
+  return _cpaConfiguredCache;
+}
+
+async function confirmAccountDelete(title, hint) {
+  const cpaOk = await cpaConfigured();
+  const row = $('#accDelCpaRowV2'); if (row) row.style.display = cpaOk ? '' : 'none';
+  const warn = $('#accDelCpaWarnV2'); if (warn) warn.style.display = cpaOk ? '' : 'none';
+  const box = $('#accDelCpaV2'); if (box) box.checked = false;
+  return new Promise(resolve => {
+    _accDelResolve = resolve;
+    $('#accDelTitleV2').textContent = title;
+    $('#accDelHintV2').textContent = hint;
+    $('#accountDeleteModal').classList.remove('hidden');
+  });
+}
+
+function closeAccountDeleteModal() {
+  $('#accountDeleteModal').classList.add('hidden');
+  if (_accDelResolve) { _accDelResolve(null); _accDelResolve = null; }
+}
+
+$('#btnCloseAccDelV2')?.addEventListener('click', closeAccountDeleteModal);
+$('#btnCancelAccDelV2')?.addEventListener('click', closeAccountDeleteModal);
+$('#accountDeleteModal')?.addEventListener('click', e => { if (e.target.id === 'accountDeleteModal') closeAccountDeleteModal(); });
+$('#btnConfirmAccDelV2')?.addEventListener('click', () => {
+  $('#accountDeleteModal').classList.add('hidden');
+  if (_accDelResolve) { _accDelResolve(true); _accDelResolve = null; }
+});
+
+function accDelCpaToast(cpa, asked) {
+  if (!asked || !cpa) return null;
+  if (cpa.deleted) return `CPA 凭证 ${cpa.name} 已删`;
+  if (cpa.reason === 'not_found') return 'CPA 未找到匹配凭证（可能本来就没上传）';
+  return `CPA 删除失败：${cpa.message || cpa.reason || '未知错误'}`;
+}
+
 async function deleteAccount(id, email, btn) {
-  if (!confirm(`确定删除账号 #${id}？\n\n${email || ''}\n\n会从本地账号列表、注册成功邮箱和 token 文件中移除。`)) return;
+  const opts = await confirmAccountDelete(
+    `删除账号 #${id}`,
+    (email ? email + '。' : '') + '会从本地账号列表、注册成功邮箱和 token 文件中移除。',
+  );
+  if (!opts) return;
   btn.disabled = true;
   try {
-    await api(`/api/accounts/${id}/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body: '{}' });
+    const r = await api(`/api/accounts/${id}/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(opts) });
     ACCOUNT_SELECTED.delete(Number(id));
-    showToast('账号已删除');
+    const cpaNote = accDelCpaToast(r.cpa, opts.delete_from_cpa);
+    showToast(cpaNote ? `账号已删除；${cpaNote}` : '账号已删除');
     loadAccounts(); loadSummary();
   } catch(err) {
     showToast('删除失败: ' + err.message);
@@ -5211,17 +5285,31 @@ async function archiveSelectedAccounts() {
 async function deleteSelectedAccounts() {
   const ids = Array.from(ACCOUNT_SELECTED);
   if (ids.length === 0) { showToast('请先选择账号'); return; }
-  if (!confirm(`确定删除选中的 ${ids.length} 个账号吗？\n\n会从本地账号列表、注册成功邮箱和 token 文件中移除。`)) return;
+  const opts = await confirmAccountDelete(
+    `删除选中的 ${ids.length} 个账号`,
+    '会从本地账号列表、注册成功邮箱和 token 文件中移除。',
+  );
+  if (!opts) return;
   const _delBtn = $('#btnDeleteSelectedAccountsV2'); if (_delBtn) _delBtn.disabled = true;
   try {
     const r = await api('/api/accounts/delete-bulk', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({account_ids: ids}),
+      body: JSON.stringify({account_ids: ids, ...opts}),
     });
     (r.deleted || []).forEach(item => ACCOUNT_SELECTED.delete(Number(item.id)));
     const skippedCount = (r.skipped || []).length;
-    showToast(skippedCount ? `已删除 ${r.deleted_count || 0} 个，跳过 ${skippedCount} 个` : `已删除 ${r.deleted_count || 0} 个`);
+    let msg = skippedCount ? `已删除 ${r.deleted_count || 0} 个，跳过 ${skippedCount} 个` : `已删除 ${r.deleted_count || 0} 个`;
+    if (opts.delete_from_cpa) {
+      const cpa = r.cpa || [];
+      const okN = r.cpa_deleted_count || 0;
+      const nfN = cpa.filter(x => !x.deleted && x.reason === 'not_found').length;
+      const errN = cpa.filter(x => !x.deleted && x.reason !== 'not_found').length;
+      msg += `；CPA 删除成功 ${okN}`
+        + (nfN ? `、无凭证 ${nfN}` : '')
+        + (errN ? `、失败 ${errN}` : '');
+    }
+    showToast(msg);
     loadAccounts(); loadSummary();
   } catch(err) {
     showToast('批量删除失败: ' + err.message);

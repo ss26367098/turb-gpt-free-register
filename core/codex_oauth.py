@@ -607,6 +607,22 @@ def download_cpa_codex_auth_text(*, cpa_name: str | None = None, email: str = ""
         raise RuntimeError(f"[Codex][CPA] CPA 下载内容不是 JSON 对象: {name}")
     return json.dumps(parsed, ensure_ascii=False, indent=2) + "\n", name, (meta or {"name": name})
 
+
+def delete_cpa_codex_auth_file(*, email: str = "", local_filename: str = "") -> dict:
+    """删除 CPA auth-files 里的一个 Codex 凭证文件。
+
+    与下载共用同一套匹配逻辑（find_cpa_codex_auth_file：文件名/邮箱打分）。
+    Returns: {deleted: True, name} 或 {deleted: False, reason: "not_found"}。
+    Raises: CPA 未配置 / 网络或鉴权失败时抛 RuntimeError，由调用方决定是否继续本地删除。
+    """
+    meta = find_cpa_codex_auth_file(email=email, local_filename=local_filename)
+    name = str((meta or {}).get("name") or "").strip()
+    if not name:
+        return {"deleted": False, "reason": "not_found", "target": email or local_filename or "未知"}
+    _cpa_request_json("DELETE", f"/v0/management/auth-files?name={quote(name, safe='')}")
+    return {"deleted": True, "name": name}
+
+
 def _first_non_empty(*values) -> str:
     for value in values:
         text = str(value or "").strip()

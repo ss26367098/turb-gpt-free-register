@@ -31,6 +31,21 @@ logger = logging.getLogger(__name__)
 _POOL_SOURCE_VALUES = frozenset(("all", "outlook", "generic_api", "imap", "cloudflare_domain"))
 
 
+def _delete_account_cpa_credential(email: str) -> dict:
+    """按邮箱删除 CPA 侧 Codex 凭证，尽力而为：失败不抛错，返回结果交给调用方提示。
+
+    返回 {deleted, email, reason?, name?, message?}；reason=not_found 表示 CPA 里本来就没有。
+    """
+    try:
+        from core.codex_oauth import delete_cpa_codex_auth_file
+        result = delete_cpa_codex_auth_file(email=email)
+    except Exception as exc:
+        logger.warning("CPA 凭证删除失败 email=%s: %s", email, exc)
+        return {"deleted": False, "email": email, "reason": "error", "message": str(exc)[:300]}
+    result["email"] = email
+    return result
+
+
 def _pool_source_arg(default: str = "outlook") -> str:
     src = str(request.args.get("source") or "").strip().lower()
     if not src and request.method == "POST":
@@ -661,17 +676,39 @@ def create_app(auth_code: str | None = None) -> Flask:
         skipped.extend(db_skipped)
         return jsonify({"ok": True, "updated": updated, "updated_count": len(updated), "archived": archived, "skipped": skipped})
 
+    @app.get("/api/cpa/status")
+    def api_cpa_status():
+        """CPA 是否已配置（管理地址和密钥都填了才算可用），供删除弹窗决定是否显示勾选框。"""
+        from config import codex as _codex_cfg
+        configured = bool(
+            str(getattr(_codex_cfg, "CPA_MANAGEMENT_URL", "") or "").strip()
+            and str(getattr(_codex_cfg, "CPA_MANAGEMENT_KEY", "") or "").strip()
+        )
+        return jsonify({"configured": configured})
+
     @app.post("/api/accounts/<int:acc_id>/delete")
     def api_account_delete(acc_id: int):
-        """删除一个已注册账号记录。只删除本地保存的账号/token记录，不改邮箱池状态。"""
+        """删除一个已注册账号记录。只删除本地保存的账号/token记录，不改邮箱池状态。
+
+        Body 可带 {delete_from_cpa: true}：先按邮箱删 CPA 侧 Codex 凭证，再删本地记录。
+        CPA 删除失败不阻断本地删除，结果放在响应 cpa 字段里让前端提示。
+        """
+        data = request.get_json(silent=True) or {}
+        delete_from_cpa = bool(data.get("delete_from_cpa"))
+        cpa_result = None
+        if delete_from_cpa:
+            acc = db.get_account(acc_id)
+            if not acc:
+                return jsonify({"ok": False, "error": "账号不存在"}), 404
+            cpa_result = _delete_account_cpa_credential(str(acc.get("email") or ""))
         deleted = db.delete_account(acc_id=acc_id)
         if not deleted:
             return jsonify({"ok": False, "error": "账号不存在"}), 404
-        return jsonify({"ok": True, "deleted": True})
+        return jsonify({"ok": True, "deleted": True, "cpa": cpa_result})
 
     @app.post("/api/accounts/delete-bulk")
     def api_accounts_delete_bulk():
-        """批量删除已注册账号记录。Body {account_ids: [...]} 或 {ids: [...]}。"""
+        """批量删除已注册账号记录。Body {account_ids: [...], delete_from_cpa: bool}。"""
         data = request.get_json(silent=True) or {}
         ids = data.get("account_ids") or data.get("ids") or []
         if not isinstance(ids, list) or not ids:
@@ -691,6 +728,17 @@ def create_app(auth_code: str | None = None) -> Flask:
                 continue
             seen.add(acc_id)
             account_ids.append(acc_id)
+        cpa_results = []
+        if bool(data.get("delete_from_cpa")):
+            # 先删 CPA 再删本地：本地记录删掉后就找不到邮箱了，无法重试 CPA 删除。
+            for acc_id in account_ids:
+                acc = db.get_account(acc_id)
+                if not acc:
+                    cpa_results.append({"id": acc_id, "deleted": False, "reason": "账号不存在"})
+                    continue
+                result = _delete_account_cpa_credential(str(acc.get("email") or ""))
+                result["id"] = acc_id
+                cpa_results.append(result)
         deleted, db_skipped = db.delete_accounts(account_ids=account_ids)
         skipped.extend(db_skipped)
         return jsonify({
@@ -698,6 +746,8 @@ def create_app(auth_code: str | None = None) -> Flask:
             "deleted": deleted,
             "deleted_count": len(deleted),
             "skipped": skipped,
+            "cpa": cpa_results,
+            "cpa_deleted_count": sum(1 for item in cpa_results if item.get("deleted")),
         })
 
     @app.post("/api/accounts/<int:acc_id>/note")
