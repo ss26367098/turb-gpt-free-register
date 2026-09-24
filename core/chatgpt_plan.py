@@ -6,6 +6,7 @@ import base64
 import ipaddress
 import json
 import logging
+import random
 import socket
 import time
 import uuid
@@ -131,7 +132,9 @@ def resolve_plan_check_route(explicit_proxy: Optional[str] = None) -> dict:
         }
 
     candidates = _proxy_lines(getattr(proxy_cfg, "PLAN_CHECK_PROXY", ""))
-    selected = candidates[0] if candidates else str(proxy_cfg.pick_proxy() or "").strip()
+    # 专用代理配置为代理池时，每次新的套餐查询随机选择一个；
+    # 若未配置专用池，则继续从通用 PROXY_POOL 随机选择。
+    selected = random.choice(candidates) if candidates else str(proxy_cfg.pick_proxy() or "").strip()
     if not selected:
         if mode == "proxy":
             raise ValueError("套餐查询网络模式为 proxy，但未配置 PLAN_CHECK_PROXY 或 PROXY_POOL")
@@ -261,6 +264,14 @@ def parse_accounts_check(data: dict, *, token: str = "") -> dict:
     is_free = str(plan_type).lower() == "free" or str(subscription_plan).lower() == "chatgptfreeplan"
     plus_trial_eligible = bool(is_free and plus_campaign)
 
+    # 保留 Free 账号返回的全部促销活动，供前端查看详情；Plus 资格判定仍然
+    # 只使用上面的 eligible_promo_campaigns.plus，保持原有语义不变。
+    promo_campaigns = {}
+    if is_free and isinstance(eligible_promo_campaigns, dict):
+        for campaign_key, campaign in eligible_promo_campaigns.items():
+            if isinstance(campaign, dict):
+                promo_campaigns[str(campaign_key)] = campaign
+
     offers = ((item.get("eligible_offers") or {}).get("offers") or [])
     eligible_offer_ids = [o.get("id") for o in offers if isinstance(o, dict) and o.get("id")]
 
@@ -295,6 +306,7 @@ def parse_accounts_check(data: dict, *, token: str = "") -> dict:
         "plus_trial_duration_num_periods": duration.get("num_periods"),
         "plus_trial_duration_period": duration.get("period"),
         "plus_trial_promotion_type_label": plus_meta.get("promotion_type_label"),
+        "eligible_promo_campaigns": promo_campaigns,
         "eligible_offer_ids": eligible_offer_ids,
         "features_count": len(item.get("features") or []),
         "can_access_with_session": bool(item.get("can_access_with_session")),

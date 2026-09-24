@@ -1479,10 +1479,14 @@ function _planCell(r) {
     if (!checkedOk) {
       return `<span class="pill status-running" title="${title}">${esc(plan)}（待查资格）</span>`;
     }
-    const text = r.plus_trial_eligible ? 'free(可Plus试用)' : 'free';
+    const trialDiscount = r.plus_trial_discount_percentage != null && r.plus_trial_discount_percentage !== '' ? ` ${r.plus_trial_discount_percentage}%折扣` : '';
+    const text = r.plus_trial_eligible ? `free(可Plus试用${trialDiscount})` : 'free';
     const cls = r.plus_trial_eligible ? 'status-success' : 'status-used';
     const t = r.plus_trial_eligible ? `${title}；Plus 试用资格可用` : title;
-    return `<span class="pill ${cls}" title="${t}">${esc(text)}</span>`;
+    const campaigns = (r.eligible_promo_campaigns && typeof r.eligible_promo_campaigns === 'object') ? r.eligible_promo_campaigns : {};
+    const keys = Object.keys(campaigns);
+    const detailBtn = keys.length ? `<button type="button" class="promo-detail-btn" data-promo-details="${esc(JSON.stringify(campaigns))}">详情(${keys.length})</button>` : '';
+    return `<span class="pill ${cls}" title="${t}">${esc(text)}</span>${detailBtn}`;
   }
 
   const isPaid = lower.includes('plus') || lower.includes('pro') || lower.includes('team') || lower.includes('go');
@@ -3288,7 +3292,9 @@ function configGroups() {
 function renderConfigField(f) {
   const fv = Object.prototype.hasOwnProperty.call(CONFIG_PENDING_UPDATES, f.key) ? CONFIG_PENDING_UPDATES[f.key] : f.value;
   let html = `<label class="fld">${esc(f.label)}<span class="hint">${esc(f.help)} · <span class="mono">${esc(f.key)}</span></span>`;
-  if (f.type === 'bool') {
+  if (Array.isArray(f.choices) && f.choices.length) {
+    html += `<select data-key="${attrEsc(f.key)}">${f.choices.map(item => `<option value="${attrEsc(item.value)}"${String(fv) === String(item.value) ? ' selected' : ''}>${esc(item.label || item.value)}</option>`).join('')}</select>`;
+  } else if (f.type === 'bool') {
     html += `<select data-key="${attrEsc(f.key)}"><option value="true"${fv?' selected':''}>开启 (True)</option><option value="false"${!fv?' selected':''}>关闭 (False)</option></select>`;
   } else if (f.type === 'int') {
     html += `<input type="number" data-key="${attrEsc(f.key)}" value="${attrEsc(fv == null ? '' : fv)}">`;
@@ -3767,5 +3773,6 @@ setInterval(loadSummary, 30000);
 setInterval(() => { if (!$('#tab-accounts').classList.contains('hidden')) pollAccountPlanStatuses(); }, 10000);
 </script>
 <script>(function(){var root=document.documentElement;var btn=document.getElementById('themeToggle');var label=document.getElementById('themeToggleLabel');function sync(){if(label){label.textContent=(root.getAttribute('data-theme')==='dark')?'浅色模式':'深色模式';}}if(btn){btn.addEventListener('click',function(){var next=(root.getAttribute('data-theme')==='dark')?'light':'dark';root.setAttribute('data-theme',next);try{localStorage.setItem('theme',next);}catch(e){}sync();});}sync();})();</script>
+{% include 'promo_details.html' %}
 </body>
 </html>

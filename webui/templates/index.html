@@ -3779,10 +3779,14 @@ function _planCell(r) {
     if (!checkedOk) {
       return `<span class="pill status-running" title="${title}">${esc(plan)}（待查资格）</span>`;
     }
-    const text = r.plus_trial_eligible ? 'free(可Plus试用)' : 'free';
+    const trialDiscount = r.plus_trial_discount_percentage != null && r.plus_trial_discount_percentage !== '' ? ` ${r.plus_trial_discount_percentage}%折扣` : '';
+    const text = r.plus_trial_eligible ? `free(可Plus试用${trialDiscount})` : 'free';
     const cls = r.plus_trial_eligible ? 'status-success' : 'status-used';
     const t = r.plus_trial_eligible ? `${title}；Plus 试用资格可用` : title;
-    return `<span class="pill ${cls}" title="${t}">${esc(text)}</span>`;
+    const campaigns = (r.eligible_promo_campaigns && typeof r.eligible_promo_campaigns === 'object') ? r.eligible_promo_campaigns : {};
+    const keys = Object.keys(campaigns);
+    const detailBtn = keys.length ? `<button type="button" class="promo-detail-btn" data-promo-details="${esc(JSON.stringify(campaigns))}">详情(${keys.length})</button>` : '';
+    return `<span class="pill ${cls}" title="${t}">${esc(text)}</span>${detailBtn}`;
   }
 
   const cls = 'status-success';
@@ -6653,7 +6657,9 @@ function renderConfigRecommendedLinks(f) {
 function renderConfigPlainFieldV2(f) {
   const fv = Object.prototype.hasOwnProperty.call(CONFIG_PENDING_UPDATES, f.key) ? CONFIG_PENDING_UPDATES[f.key] : f.value;
   let control = '';
-  if (f.type === 'int') {
+  if (Array.isArray(f.choices) && f.choices.length) {
+    control = `<select data-key="${attrEsc(f.key)}">${f.choices.map(item => `<option value="${attrEsc(item.value)}"${String(fv) === String(item.value) ? ' selected' : ''}>${esc(item.label || item.value)}</option>`).join('')}</select>`;
+  } else if (f.type === 'int') {
     control = `<input type="number" data-key="${attrEsc(f.key)}" value="${attrEsc(fv == null ? '' : fv)}">`;
   } else if (f.type === 'float') {
     control = `<input type="number" step="0.1" data-key="${attrEsc(f.key)}" value="${attrEsc(fv == null ? '' : fv)}">`;
@@ -6950,7 +6956,7 @@ function renderConfigSectionV2(name, fields) {
       .map(k => fields.find(f => f.key === k))
       .filter(Boolean)
       .concat(fields.filter(f => !preferred.includes(f.key)));
-    // 这一组不全是开关：TWOFA_WORKERS / TWOFA_QUEUE_LIMIT 是整数，
+// 这一组不全是开关：TWOFA_WORKERS / TWOFA_QUEUE_LIMIT 是整数，
     // 一律按开关渲染会变成 checkbox，取值时 parseInt('on') 得到 NaN，
     // 序列化成 null 后服务端 int(None) 抛错，整页保存一起 500。
     const switches = ordered.filter(f => f.type === 'bool');
@@ -7658,5 +7664,6 @@ setInterval(loadSummary, 30000);
 setInterval(() => { if (!$('#tab-accounts').classList.contains('hidden')) pollAccountPlanStatuses(); }, 10000);
 </script>
 <script>(function(){var root=document.documentElement;var btn=document.getElementById('themeToggle');var label=document.getElementById('themeToggleLabel');function sync(){if(label){label.textContent=(root.getAttribute('data-theme')==='dark')?'浅色模式':'深色模式';}}if(btn){btn.addEventListener('click',function(){var next=(root.getAttribute('data-theme')==='dark')?'light':'dark';root.setAttribute('data-theme',next);try{localStorage.setItem('theme',next);}catch(e){}sync();});}sync();})();</script>
+{% include 'promo_details.html' %}
 </body>
 </html>

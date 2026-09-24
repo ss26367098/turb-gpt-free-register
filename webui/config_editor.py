@@ -285,6 +285,14 @@ EDITABLE_FIELDS = [
         "label": "启用 2FA(TOTP)", "help": "注册完成后自动设置动态口令（会多收一封 OTP 邮件）",
     },
     {
+        "key": "TWOFA_PROXY_MODE", "file": "twofa.py", "type": "str", "group": "功能开关",
+        "label": "2FA代理模式", "help": "saved=优先使用账号保存的代理；pool=忽略保存代理，每次从代理池随机取一个；修改后需重启服务",
+        "choices": [
+            {"value": "saved", "label": "使用账号保存的代理"},
+            {"value": "pool", "label": "每次从代理池随机获取"},
+        ],
+    },
+    {
         "key": "TWOFA_WORKERS", "file": "twofa.py", "type": "int", "group": "功能开关",
         "label": "2FA并发数", "help": "同时执行的2FA设置任务数，默认4，范围1-16；修改后需重启服务",
     },
@@ -1105,8 +1113,14 @@ def update_config(updates: dict) -> dict:
         if field is None:
             ignored.append(key)
             continue
-# 单个字段格式不对时只跳过它，其余字段照常落盘，避免一个坏控件让整页保存失败。
+# choices 白名单校验和格式容错放在同一个 try 里：越界或格式不对只跳过该字段，
+        # 其余字段照常落盘，避免一个坏控件让整页保存失败。
         try:
+            choices = field.get("choices") or []
+            if choices:
+                allowed = {str(item.get("value")) for item in choices}
+                if str(value) not in allowed:
+                    raise ValueError(f"{key} 的值无效，可选：{', '.join(sorted(allowed))}")
             env_updates[key] = _format_env_value(
                 value,
                 field["type"],
