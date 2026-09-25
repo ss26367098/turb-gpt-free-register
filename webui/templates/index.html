@@ -2230,6 +2230,12 @@
       </svg>
       <span class="sidebar-item-label">SMSBower</span>
     </button>
+    <button type="button" data-tab="auxmail" class="sidebar-item">
+      <svg class="sidebar-item-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/>
+      </svg>
+      <span class="sidebar-item-label">辅助邮箱</span>
+    </button>
     <button type="button" data-tab="config" class="sidebar-item">
       <svg class="sidebar-item-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -2749,6 +2755,52 @@
     </section>
   </div>
 
+  <!-- ============ 辅助邮箱 ============ -->
+  <div id="tab-auxmail" class="hidden">
+    <section class="sb-hero">
+      <div class="sb-hero-main">
+        <h1 class="sb-hero-title">辅助邮箱</h1>
+        <p class="sb-hero-desc">
+          微软登录出现「Help us protect your account / Verify your email」时，验证码会发到该账号注册时预留的<b>恢复邮箱</b>。
+          把那些恢复邮箱在这里登记一次，补跑 Codex 时程序会按页面上的掩码邮箱（如 sb*****@163.com）自动匹配并取码。
+        </p>
+      </div>
+    </section>
+
+    <div class="sb-controls">
+      <div class="sb-field sb-field--grow">
+        <label class="sb-field-label" for="auxLines">批量导入</label>
+        <textarea id="auxLines" rows="4" spellcheck="false"
+          placeholder="每行一个：邮箱----密码或IMAP授权码----IMAP服务器(可省略)&#10;例如：sb12345@163.com----abcd1234&#10;服务器省略时按域名自动推断（163→imap.163.com，QQ→imap.qq.com）"></textarea>
+      </div>
+      <div class="sb-field">
+        <label class="sb-field-label">&nbsp;</label>
+        <button type="button" class="btn primary" id="auxImport">导入</button>
+      </div>
+      <div class="sb-field">
+        <label class="sb-field-label">&nbsp;</label>
+        <button type="button" class="btn" id="auxRefresh">刷新</button>
+      </div>
+    </div>
+    <div class="sb-note" id="auxNote"></div>
+
+    <div class="sb-table-wrap">
+      <table class="sb-table">
+        <thead>
+          <tr>
+            <th>邮箱</th>
+            <th>IMAP 服务器</th>
+            <th>端口</th>
+            <th>凭据</th>
+            <th>导入时间</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="auxBody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- ============ 配置 ============ -->
   <div id="tab-config" class="hidden">
     <div class="config-overview-v2" id="configOverviewV2" aria-label="配置概览">
@@ -3121,7 +3173,7 @@ function debounce(fn, wait=250) {
 
 // ---------- Tab 切换 ----------
 function activateTab(tab, persist=true) {
-  const allowed = ['register','accounts','codex','outlook','smsbower','config'];
+  const allowed = ['register','accounts','codex','outlook','smsbower','auxmail','config'];
   if (!allowed.includes(tab)) tab = 'register';
   $$('nav button').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
   allowed.forEach(t => $('#tab-'+t).classList.toggle('hidden', t !== tab));
@@ -3130,6 +3182,7 @@ function activateTab(tab, persist=true) {
   if (tab === 'codex') loadCodex();
   if (tab === 'outlook') loadOutlook();
   if (tab === 'smsbower') loadSmsBower();
+  if (tab === 'auxmail') loadAuxEmails();
   if (tab === 'config') loadConfig();
   if (tab === 'register') refreshJobs();
 }
@@ -7657,6 +7710,85 @@ $('#sbService')?.addEventListener('change', () => loadSmsBower(true));
 // 手动改最高价说明不再按某个档位走，清掉档位锁定，避免价格与供应商对不上。
 $('#sbMaxPrice')?.addEventListener('input', () => {
   if (SB.picked) { SB.pickedTier = {}; SB.pickedTierId = {}; sbRender(); }
+});
+
+// ---------- 辅助邮箱（微软「保护账号」验证码收码邮箱） ----------
+let AUX_EMAILS = [];
+
+function auxSetNote(text, kind) {
+  const el = $('#auxNote');
+  if (!el) return;
+  el.className = 'sb-note is-visible' + (kind ? ' sb-note--' + kind : '');
+  el.textContent = text || '';
+}
+
+async function loadAuxEmails() {
+  try {
+    AUX_EMAILS = await api('/api/aux-emails');
+    auxRender();
+  } catch (e) {
+    auxSetNote('加载失败：' + e.message, 'error');
+  }
+}
+
+function auxRender() {
+  const body = $('#auxBody');
+  if (!body) return;
+  if (!AUX_EMAILS.length) {
+    body.innerHTML = '<tr><td colspan="6" class="sb-empty">还没有辅助邮箱。微软登录要求恢复邮箱验证码时，把恢复邮箱（邮箱----密码/授权码）导入这里即可自动收码。</td></tr>';
+    return;
+  }
+  body.innerHTML = AUX_EMAILS.map(r => `
+    <tr>
+      <td class="sb-mono">${esc(r.email)}</td>
+      <td class="sb-mono">${esc(r.server)}</td>
+      <td class="sb-num">${esc(r.port || 993)}</td>
+      <td>${r.has_password ? '已配置' : '<span style="color:var(--red)">缺失</span>'}</td>
+      <td class="sb-mono">${esc(String(r.created_at || '').replace('T', ' ').slice(0, 19))}</td>
+      <td><button type="button" class="danger" data-aux-del="${esc(r.id)}">删除</button></td>
+    </tr>`).join('');
+}
+
+async function auxImport() {
+  const lines = ($('#auxLines')?.value || '').trim();
+  if (!lines) { auxSetNote('请先按格式粘贴辅助邮箱素材', 'warn'); return; }
+  const btn = $('#auxImport');
+  if (btn) { btn.disabled = true; btn.textContent = '导入中…'; }
+  try {
+    const r = await api('/api/aux-emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lines }),
+    });
+    if ($('#auxLines')) $('#auxLines').value = '';
+    const fails = (r.failed || []).map(f => `${f.line || f.email || '?'}：${f.reason || f.error || '失败'}`).join('；');
+    auxSetNote(r.note + (fails ? `。失败明细：${fails}` : ''), fails && !r.added_count ? 'error' : 'ok');
+    await loadAuxEmails();
+  } catch (e) {
+    auxSetNote('导入失败：' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '导入'; }
+  }
+}
+
+async function auxDelete(id, btn) {
+  if (!confirm('确定删除这个辅助邮箱吗？')) return;
+  if (btn) btn.disabled = true;
+  try {
+    await api('/api/aux-emails/' + id, { method: 'DELETE' });
+    showToast('已删除');
+    await loadAuxEmails();
+  } catch (e) {
+    showToast('删除失败: ' + e.message);
+    if (btn) btn.disabled = false;
+  }
+}
+
+$('#auxImport')?.addEventListener('click', auxImport);
+$('#auxRefresh')?.addEventListener('click', () => loadAuxEmails());
+$('#tab-auxmail')?.addEventListener('click', e => {
+  const del = e.target.closest('[data-aux-del]');
+  if (del) { auxDelete(del.dataset.auxDel, del); return; }
 });
 
 // ---------- 初始化 ----------

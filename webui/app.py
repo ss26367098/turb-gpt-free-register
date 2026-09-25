@@ -677,6 +677,53 @@ def create_app(auth_code: str | None = None) -> Flask:
         skipped.extend(db_skipped)
         return jsonify({"ok": True, "updated": updated, "updated_count": len(updated), "archived": archived, "skipped": skipped})
 
+    # ----------------------------------------------------------
+    # 辅助邮箱（微软「保护账号」验证码收码邮箱）
+    # ----------------------------------------------------------
+    @app.get("/api/aux-emails")
+    def api_aux_emails_list():
+        """列出辅助邮箱。密码不回传，只回有没有配。"""
+        from core import aux_mail
+        rows = aux_mail.list_emails()
+        return jsonify([
+            {
+                "id": r["id"], "email": r["email"], "server": r["server"],
+                "port": r["port"], "status": r["status"], "note": r["note"],
+                "created_at": r["created_at"],
+                "has_password": bool(r.get("password")),
+            }
+            for r in rows
+        ])
+
+    @app.post("/api/aux-emails")
+    def api_aux_emails_add():
+        """导入辅助邮箱。Body {lines: '邮箱----密码[----服务器]'} 或 {email,password,server}。"""
+        from core import aux_mail
+        data = request.get_json(silent=True) or {}
+        if str(data.get("lines") or "").strip():
+            result = aux_mail.parse_import_lines(str(data["lines"]))
+            return jsonify({
+                "ok": True,
+                "added_count": len(result["added"]),
+                "failed": result["failed"],
+                "note": f"已导入 {len(result['added'])} 个，失败 {len(result['failed'])} 个",
+            })
+        email_addr = str(data.get("email") or "").strip()
+        password = str(data.get("password") or "").strip()
+        server = str(data.get("server") or "").strip()
+        result = aux_mail.add_email(email_addr, password, server)
+        if not result.get("ok"):
+            return jsonify({"ok": False, "error": result.get("error")}), 400
+        return jsonify({"ok": True, "added_count": 1, "failed": [], "note": "已保存"})
+
+    @app.delete("/api/aux-emails/<aux_id>")
+    def api_aux_emails_delete(aux_id):
+        from core import aux_mail
+        deleted = aux_mail.delete_email(aux_id)
+        if not deleted:
+            return jsonify({"ok": False, "error": "不存在"}), 404
+        return jsonify({"ok": True})
+
     @app.get("/api/cpa/status")
     def api_cpa_status():
         """CPA 是否已配置（管理地址和密钥都填了才算可用），供删除弹窗决定是否显示勾选框。"""

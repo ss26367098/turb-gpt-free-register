@@ -373,6 +373,261 @@ def _fill_login_password_if_present(driver, email: str, timeout: int = 18) -> st
     return None
 
 
+def _fill_microsoft_protect_code(driver, masked_email: str) -> bool:
+    """处理微软「Help us protect your account」页：向恢复邮箱发码并用辅助邮箱池收码。
+
+    页面会把验证码发到注册时预留的恢复邮箱（掩码显示，如 sb*****@163.com）。
+    掩码匹配到「辅助邮箱」页导入的账号后，点 Send code，直接 IMAP 取码回填。
+    返回 True 表示验证码已提交。
+    """
+    try:
+        from core import aux_mail
+    except Exception as exc:
+        logger.warning("[Codex][Browser] 辅助邮箱模块不可用：%s", str(exc)[:120])
+        return False
+    aux = aux_mail.match_masked(masked_email)
+    if aux is None:
+        logger.warning(
+            "[Codex][Browser] 微软要求向恢复邮箱 %s 发验证码，但辅助邮箱池里没有匹配项；"
+            "请在「辅助邮箱」页导入该邮箱（邮箱----密码/授权码）", masked_email)
+        return False
+    aux_email = str(aux.get("email") or "")
+    logger.info("[Codex][Browser] 恢复邮箱 %s 匹配到辅助邮箱 %s", masked_email, aux_email)
+
+    # 点 Send code（该页主按钮就是 idSIButton9）；若验证码输入框已出现说明已发过，跳过
+    state = (driver.execute_script(_MS_STATE_JS) or {})
+    if not state.get("code_input"):
+        try:
+            btn = driver.find_element("css selector", "#idSIButton9")
+            _human_click(driver, btn, label="codex_ms_send_code")
+            logger.info("[Codex][Browser] 已点击“发送验证码”")
+            human_delay("form", minimum=1.2, maximum=2.0)
+        except Exception as exc:
+            logger.warning("[Codex][Browser] 点击“发送验证码”失败：%s", str(exc)[:140])
+            return False
+
+    send_ts = time.time()
+    try:
+        code = aux_mail.fetch_microsoft_code(aux_email, after_ts=send_ts, max_wait=150)
+    except Exception as exc:
+        logger.warning("[Codex][Browser] 辅助邮箱取码失败：%s", str(exc)[:200])
+        return False
+
+    # 等验证码输入框出现并回填
+    end = time.time() + 20
+    code_input = None
+    while time.time() < end:
+        state = (driver.execute_script(_MS_STATE_JS) or {})
+        if state.get("code_input"):
+            try:
+                code_input = driver.find_element(
+                    "css selector",
+                    "input[type='tel'],input[inputmode='numeric'],input[name*='otc' i],input[name*='code' i],input[maxlength]")
+                break
+            except Exception:
+                pass
+        time.sleep(0.6)
+    if code_input is None:
+        logger.warning("[Codex][Browser] 验证码已取到（%s）但页面没有输入框", code)
+        return False
+    _human_type_text(driver, code_input, code, clear=True)
+    human_delay("form", minimum=1.0, maximum=1.8)
+    try:
+        btn = driver.find_element("css selector", "#idSIButton9")
+        _human_click(driver, btn, label="codex_ms_code_submit")
+    except Exception:
+        driver.execute_script("const f=arguments[0].form; f ? f.submit() : arguments[0].click();", code_input)
+    logger.info("[Codex][Browser] 已填写并提交微软恢复邮箱验证码（来自 %s）：%s", aux_email, code)
+    human_delay("navigate")
+    return True
+
+
+def _is_microsoft_sso_page(driver) -> bool:
+    """是否停在微软 SSO 登录页（OpenAI 会把 hotmail/outlook 等微软域邮箱重定向过去）。"""
+    try:
+        url = str(driver.current_url or "").lower()
+    except Exception:
+        url = ""
+    return "login.live.com" in url or "login.microsoftonline.com" in url
+
+
+def _account_mailbox_password_for_email(email: str) -> str:
+    """微软 SSO 页要填的是邮箱本体密码（邮箱池素材里的 password），不是 ChatGPT 注册密码。"""
+    try:
+        from core import db
+        acc = db.get_account_by_email(email)
+        if not acc:
+            return ""
+        return str(acc.get("password") or "").strip()
+    except Exception:
+        return ""
+
+
+# 微软「验证邮箱」页会把验证码发到注册时留的恢复邮箱（不是我们的邮箱），
+# 但页面提供“改用密码登录”入口，点它才会出现密码框。在页面内直接点击并返回结果。
+_MS_USE_PASSWORD_JS = r"""
+const visible = el => !!el && !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length)
+  && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none';
+const hit = [...document.querySelectorAll('a,button,[role="link"],[role="button"]')]
+  .find(el => visible(el) && /use your password|using your password|パスワードを使用|使用密码|使用你的密[码碼]/i
+    .test(String(el.textContent || '').trim()));
+if (!hit) return {ok:false, reason:'missing_use_password_entry'};
+hit.scrollIntoView({block:'center'});
+hit.click();
+return {ok:true, reason:'clicked'};
+"""
+
+# 只回布尔状态不回元素：适配层 execute_script 对嵌在 dict 里的元素会序列化成字符串，
+# 元素句柄必须走 find_element 顶层获取。
+# protect/masked：微软「Help us protect your account / Verify your email」页，
+# 验证码发到注册时留的恢复邮箱，页面显示掩码（sb*****@163.com）。
+_MS_STATE_JS = r"""
+const visible = el => !!el && !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length)
+  && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none'
+  && !el.disabled && !el.readOnly;
+const pw = [...document.querySelectorAll('input[type="password"],input[name="passwd"],input[name*="password" i]')].find(visible);
+const primary = document.getElementById('idSIButton9');
+const usePw = [...document.querySelectorAll('a,button,[role="link"],[role="button"]')]
+  .find(el => visible(el) && /use your password|using your password|パスワードを使用|使用密码|使用你的密[码碼]/i
+    .test(String(el.textContent || '').trim()));
+const text = document.body ? document.body.innerText : '';
+const protect = /help us protect|protect your account|verify your email|セキュリティ コード|验证你的电子邮箱|保护你的帐户/i.test(text);
+const maskedMatch = text.match(/([A-Za-z0-9._%+-]{1,3})\*{2,}@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
+const codeInput = [...document.querySelectorAll('input[type="tel"],input[inputmode="numeric"],input[name*="otc" i],input[name*="code" i],input[maxlength]')].find(visible);
+return {
+  pw: !!pw, primary: !!(primary && visible(primary)), use_pw: !!usePw,
+  protect: protect, masked: maskedMatch ? (maskedMatch[1] + '*****@' + maskedMatch[2]) : '',
+  code_input: !!codeInput,
+};
+"""
+
+
+def _fill_microsoft_login_if_present(driver, email: str, timeout: int = 20) -> bool:
+    """处理提交邮箱后被重定向到微软 SSO 登录页的情况。
+
+    OpenAI 会把身份源为微软的邮箱（hotmail/outlook/live）转到 login.live.com，
+    那里要填邮箱本体密码，之后可能弹“保持登录状态？”，确认后自动跳回
+    auth.openai.com 完成 OAuth。返回 True 表示已处理完并离开微软页。
+    """
+    # 阶段 1：等微软页出现。重定向经代理时可能要二三十秒才落到 login.live.com，
+    # 这里等满 timeout，不能因为中途还在 auth.openai.com 就提前放弃。
+    end = time.time() + timeout
+    seen = False
+    while time.time() < end:
+        if _is_microsoft_sso_page(driver):
+            seen = True
+            break
+        time.sleep(0.4)
+    if not seen:
+        return False
+
+    password = _account_mailbox_password_for_email(email)
+    if not password:
+        logger.warning("[Codex][Browser] 进入微软登录页，但账号记录里没有邮箱密码，无法自动登录：%s", email)
+        return False
+
+    # 阶段 2：走到密码框并提交。顺序：密码框 > “使用密码登录”入口 > 主按钮（保持登录）。
+    # 元素一律用 find_element 拿真实句柄——execute_script 嵌在 dict 里的元素会被序列化成字符串。
+    submitted = False
+    end = time.time() + 40
+    _dump_count = 0
+    while time.time() + 12 < end:
+        if not _is_microsoft_sso_page(driver):
+            submitted = True
+            break
+        state = (driver.execute_script(_MS_STATE_JS) or {})
+        if state.get("pw"):
+            try:
+                pw_input = driver.find_element("css selector", "input[type='password'],input[name='passwd']")
+            except Exception:
+                pw_input = None
+            if pw_input is not None:
+                submit_btn = None
+                try:
+                    submit_btn = driver.find_element("css selector", "#idSIButton9")
+                except Exception:
+                    pass
+                _human_type_text(driver, pw_input, password, clear=True)
+                human_delay("form", minimum=2.0, maximum=3.6)
+                if submit_btn is not None:
+                    _human_click(driver, submit_btn, label="codex_microsoft_signin")
+                else:
+                    driver.execute_script(
+                        "const f=arguments[0].form; f ? f.submit() : arguments[0].click();", pw_input)
+                logger.info("[Codex][Browser] 已填写并提交微软登录密码：%s", email)
+                submitted = True
+                break
+        if state.get("use_pw"):
+            clicked = (driver.execute_script(_MS_USE_PASSWORD_JS) or {})
+            if clicked.get("ok"):
+                logger.info("[Codex][Browser] 微软页为“验证邮箱”页，已点击“使用密码登录”入口")
+                human_delay("form", minimum=1.2, maximum=2.2)
+                continue
+        # 「保护账号」页：验证码发恢复邮箱，用辅助邮箱池收码。优先级高于主按钮——
+        # 这种页面的主按钮就是 Send code，没有辅助邮箱收码，点了也白点。
+        if state.get("protect") and state.get("masked"):
+            if _fill_microsoft_protect_code(driver, str(state.get("masked"))):
+                submitted = True
+                break
+            logger.warning("[Codex][Browser] 恢复邮箱验证码未处理，微软登录无法继续")
+            return False
+        if state.get("primary") and not state.get("use_pw"):
+            try:
+                btn = driver.find_element("css selector", "#idSIButton9")
+                _human_click(driver, btn, label="codex_microsoft_primary")
+                logger.info("[Codex][Browser] 已点击微软主按钮（保持登录状态/继续）")
+                human_delay("form")
+                continue
+            except Exception:
+                pass
+        # 都没匹配上：打一次页面状态便于定位（账号选择页/二次验证等）
+        _dump_count += 1
+        if _dump_count % 5 == 1:
+            dump = (driver.execute_script(r"""
+            const visible = el => !!el && !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length)
+              && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none';
+            return {
+              url: location.href.slice(0, 120),
+              inputs: [...document.querySelectorAll('input')].filter(visible)
+                .map(i => (i.type || '?') + ':' + (i.name || i.id || '')).slice(0, 6),
+              text: (document.body ? document.body.innerText : '').replace(/\s+/g, ' ').slice(0, 200),
+            };
+            """) or {})
+            logger.info("[Codex][Browser] 微软登录页未就绪：state=%s 页面=%s", state, dump)
+        time.sleep(0.6)
+    if not submitted:
+        logger.warning("[Codex][Browser] 微软登录页一直未出现可用的密码输入框：%s", email)
+        return False
+
+    # 阶段 3：等离开微软域；期间可能再弹“保护账号”（恢复邮箱验证码）或“保持登录状态？”
+    human_delay("navigate")
+    end = time.time() + 25
+    while time.time() < end:
+        if not _is_microsoft_sso_page(driver):
+            logger.info("[Codex][Browser] 微软登录完成，已返回 OpenAI 授权流程")
+            return True
+        state = (driver.execute_script(_MS_STATE_JS) or {})
+        if state.get("protect") and state.get("masked") and not state.get("use_pw"):
+            # 密码提交后弹的二次验证：收码可能要一两分钟，成功后重置离开等待
+            if _fill_microsoft_protect_code(driver, str(state.get("masked"))):
+                end = time.time() + 25
+                continue
+            logger.warning("[Codex][Browser] 恢复邮箱验证码未处理，微软登录无法继续")
+            return False
+        if state.get("primary") and not state.get("pw") and not state.get("use_pw"):
+            try:
+                btn = driver.find_element("css selector", "#idSIButton9")
+                _human_click(driver, btn, label="codex_microsoft_kmsi")
+                logger.info("[Codex][Browser] 已点击微软“保持登录状态”确认")
+                human_delay("form")
+                continue
+            except Exception:
+                pass
+        time.sleep(0.6)
+    logger.warning("[Codex][Browser] 微软登录后迟迟未跳回 OpenAI（可能在等二次验证）：%s", email)
+    return False
+
+
 def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None:
     otp_after_ts = time.time()
     logger.info("[Codex][Browser] 打开授权地址")
@@ -390,6 +645,10 @@ def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None
         human_delay("form")
         _submit_email_step(driver)
         logger.info("[Codex][Browser] 已提交邮箱，等待邮箱 OTP 页面")
+        # 重定向到 login.live.com 经代理最慢观察到 ~45s，等待窗口必须覆盖它
+        if _fill_microsoft_login_if_present(driver, email, timeout=60):
+            logger.info("[Codex][Browser] 微软 SSO 登录已处理，进入后续授权步骤")
+            return
         pw_result = _fill_login_password_if_present(driver, email, timeout=18)
         if pw_result == "next_step":
             if _is_mfa_challenge_page(driver):
@@ -423,6 +682,9 @@ def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None
             human_delay("form")
             _submit_email_step(driver)
             logger.info("[Codex][Browser] 已重新提交邮箱触发 OTP")
+            if _fill_microsoft_login_if_present(driver, email, timeout=12):
+                logger.info("[Codex][Browser] 重新提交邮箱后走微软 SSO 登录，进入后续授权步骤")
+                return
             pw_result = _fill_login_password_if_present(driver, email, timeout=12)
             if pw_result == "next_step":
                 if _is_mfa_challenge_page(driver):
@@ -450,6 +712,11 @@ def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None
                 timeout=90,
             )
         except Exception as exc:
+            # OTP 等待的 90s 里页面可能已经落到微软 SSO 登录页（那是等不到邮件验证码的），
+            # 先补一次微软页检查再决定是否重发。
+            if _fill_microsoft_login_if_present(driver, email, timeout=5):
+                logger.info("[Codex][Browser] OTP 等待期间落在微软登录页，已处理登录")
+                return
             if otp_attempt >= max_otp_attempts:
                 raise
             logger.warning(
