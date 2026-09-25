@@ -5204,8 +5204,11 @@ $('#btnCloseAccDelV2')?.addEventListener('click', closeAccountDeleteModal);
 $('#btnCancelAccDelV2')?.addEventListener('click', closeAccountDeleteModal);
 $('#accountDeleteModal')?.addEventListener('click', e => { if (e.target.id === 'accountDeleteModal') closeAccountDeleteModal(); });
 $('#btnConfirmAccDelV2')?.addEventListener('click', () => {
+  // 必须把勾选框状态打包进结果：早期版本这里 resolve(true)，调用方把布尔值当 opts 用，
+  // delete_from_cpa 永远是 undefined，CPA 删除从未真正执行。
+  const cpa = !!$('#accDelCpaV2')?.checked;
   $('#accountDeleteModal').classList.add('hidden');
-  if (_accDelResolve) { _accDelResolve(true); _accDelResolve = null; }
+  if (_accDelResolve) { _accDelResolve({delete_from_cpa: cpa}); _accDelResolve = null; }
 });
 
 function accDelCpaToast(cpa, asked) {
