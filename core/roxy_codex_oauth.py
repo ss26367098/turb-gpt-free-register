@@ -40,6 +40,10 @@ _base_logger = logging.getLogger(__name__)
 _CODEX_BROWSER_KIND: ContextVar[str] = ContextVar("codex_browser_kind", default="Roxy")
 
 
+class AuxMailRequiredError(RuntimeError):
+    """微软登录要求恢复邮箱验证码，但辅助邮箱池缺少/取不到该邮箱，无法继续。"""
+
+
 def _codex_prefix() -> str:
     return f"[Codex][{_CODEX_BROWSER_KIND.get()}]"
 
@@ -390,7 +394,9 @@ def _fill_microsoft_protect_code(driver, masked_email: str) -> bool:
         logger.warning(
             "[Codex][Browser] 微软要求向恢复邮箱 %s 发验证码，但辅助邮箱池里没有匹配项；"
             "请在「辅助邮箱」页导入该邮箱（邮箱----密码/授权码）", masked_email)
-        return False
+        raise AuxMailRequiredError(
+            f"微软要求向恢复邮箱 {masked_email} 发验证码，但辅助邮箱池里没有匹配项；"
+            "请在「辅助邮箱」页导入该邮箱（邮箱----密码/授权码）后重试")
     aux_email = str(aux.get("email") or "")
     logger.info("[Codex][Browser] 恢复邮箱 %s 匹配到辅助邮箱 %s", masked_email, aux_email)
 
@@ -411,7 +417,7 @@ def _fill_microsoft_protect_code(driver, masked_email: str) -> bool:
         code = aux_mail.fetch_microsoft_code(aux_email, after_ts=send_ts, max_wait=150)
     except Exception as exc:
         logger.warning("[Codex][Browser] 辅助邮箱取码失败：%s", str(exc)[:200])
-        return False
+        raise AuxMailRequiredError(f"辅助邮箱 {aux_email} 取微软验证码失败：{str(exc)[:180]}") from exc
 
     # 等验证码输入框出现并回填
     end = time.time() + 20
@@ -659,6 +665,8 @@ def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None
             logger.info("[Codex][Browser] 密码登录后仍进入邮箱 OTP 页面")
         else:
             _maybe_click_passwordless_after_email(driver, email, timeout=18)
+    except AuxMailRequiredError:
+        raise
     except Exception as exc:
         logger.info("[Codex][Browser] 未检测到邮箱输入框，可能已登录或进入下一步：%s", str(exc)[:120])
         return
@@ -693,6 +701,8 @@ def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None
                 return
             if pw_result != "email_otp":
                 _maybe_click_passwordless_after_email(driver, email, timeout=12)
+        except AuxMailRequiredError:
+            raise
         except Exception as exc:
             # 如果重进授权地址后已经停在验证码/下一步页面，就不要再强行提交。
             if not _is_email_verification_page(driver):
@@ -1783,6 +1793,11 @@ def _run_roxy_codex_oauth_once(
             email=email,
             message=f"账号已废（{exc.error_code or 'account_deactivated'}）",
         )
+    except AuxMailRequiredError as exc:
+        # 恢复邮箱验证码拿不到（池里没有/取码超时）：直接失败并给出可操作提示，
+        # 不再落回邮箱 OTP 轮询空烧 3×90s 后报误导性的“等待 OTP 超时”。
+        logger.warning("[Codex][Browser] 需要辅助邮箱收码：%s，%s", email, exc)
+        return proto._codex_result(status="failed", email=email, message=str(exc))
     except Exception as exc:
         logger.warning("[Codex][Browser] 失败：%s，%s: %s", email, type(exc).__name__, str(exc)[:240])
         logger.debug("[Codex][Browser] 失败详情", exc_info=True)
