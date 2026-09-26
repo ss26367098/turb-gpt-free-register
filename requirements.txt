@@ -1,4 +1,7 @@
-curl_cffi>=0.15.0
+# macOS 27 (Darwin 27.x) 上 0.15+ 的 wheel dlopen 失败（CoreFoundation 符号缺失），
+# 0.13.0 会随机报 TLS connect error: OPENSSL_internal:invalid library；0.14.0 实测稳定。
+curl_cffi==0.14.0; sys_platform == "darwin"
+curl_cffi>=0.15.0; sys_platform != "darwin"
 pyotp>=2.9.0
 flask>=3.0.0
 requests>=2.31.0
