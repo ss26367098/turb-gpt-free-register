@@ -2181,6 +2181,36 @@
       display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
       padding: 14px 22px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-3);
     }
+
+    /* ============ 辅助邮箱 ============ */
+    .sb-field--grow { flex: 1 1 320px; min-width: 0; }
+    .sb-field--grow textarea {
+      width: 100%; min-height: 96px; box-sizing: border-box; margin-top: 0;
+      border: 1px solid var(--line); border-radius: 6px; background: var(--surface);
+      color: var(--text); font: inherit; font-size: 13px;
+      font-family: ui-monospace, Consolas, monospace; line-height: 1.6;
+      padding: 8px 12px; resize: vertical;
+    }
+    .sb-field--grow textarea:focus { outline: none; border-color: #377DFF; }
+    .sb-field--grow textarea::placeholder { color: var(--text-3); }
+    /* 导入/刷新并排放一行，窄屏不再各自换行 */
+    .aux-actions { flex: 0 0 auto; }
+    .aux-actions-row { display: flex; gap: 12px; align-items: center; }
+    /* 辅助邮箱表格：重置 SMSBower 价格表的右对齐列宽规则，按内容自适应 */
+    table.sb-table.aux-table th:nth-child(n),
+    table.sb-table.aux-table td:nth-child(n) { width: auto; text-align: left; }
+    table.sb-table.aux-table th:nth-child(3) { width: 70px; }
+    table.sb-table.aux-table th:nth-child(4) { width: 90px; }
+    table.sb-table.aux-table th:nth-child(5) { width: 170px; }
+    table.sb-table.aux-table th:nth-child(6) { width: 70px; }
+    .aux-mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+    .aux-table .btn-danger-sm {
+      min-height: 30px; padding: 4px 12px; box-sizing: border-box;
+      border: 1px solid #e7a3a0; border-radius: 6px; background: var(--surface);
+      color: var(--danger-text); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
+    }
+    .aux-table .btn-danger-sm:hover { background: var(--danger-soft); }
+    html[data-theme="dark"] .aux-table .btn-danger-sm { border-color: #6b3a37; background: transparent; }
 </style>
 <script>(function(){try{var t=localStorage.getItem('theme');if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 </head>
@@ -2757,48 +2787,52 @@
 
   <!-- ============ 辅助邮箱 ============ -->
   <div id="tab-auxmail" class="hidden">
-    <section class="sb-hero">
-      <div class="sb-hero-main">
-        <h1 class="sb-hero-title">辅助邮箱</h1>
-        <p class="sb-hero-desc">
-          微软登录出现「Help us protect your account / Verify your email」时，验证码会发到该账号注册时预留的<b>恢复邮箱</b>。
-          把那些恢复邮箱在这里登记一次，补跑 Codex 时程序会按页面上的掩码邮箱（如 sb*****@163.com）自动匹配并取码。
-        </p>
+    <h1 class="register-title">辅助邮箱</h1>
+    <section class="smsbower-panel" aria-label="辅助邮箱（微软恢复邮箱验证码）">
+      <div class="sb-head">
+        <div class="sb-head-main">
+          <h2 class="sb-title">恢复邮箱凭据</h2>
+          <p class="sb-subtitle">
+            微软登录出现「Help us protect your account / Verify your email」时，验证码会发到该账号注册时预留的<b>恢复邮箱</b>。
+            把那些恢复邮箱在这里登记一次，补跑 Codex 时程序会按页面上的掩码邮箱（如 sb*****@163.com）自动匹配并 IMAP 取码。
+          </p>
+        </div>
       </div>
+
+      <p class="sb-note" id="auxNote"></p>
+
+      <div class="sb-controls">
+        <div class="sb-field sb-field--grow">
+          <label class="sb-field-label" for="auxLines">批量导入</label>
+          <textarea id="auxLines" rows="4" spellcheck="false"
+            placeholder="每行一个：邮箱----密码或IMAP授权码----IMAP服务器(可省略)&#10;例如：sb12345@163.com----abcd1234&#10;服务器省略时按域名自动推断（163→imap.163.com，QQ→imap.qq.com）"></textarea>
+        </div>
+        <div class="sb-field aux-actions">
+          <label class="sb-field-label">&nbsp;</label>
+          <div class="aux-actions-row">
+            <button type="button" class="sb-btn sb-btn--primary" id="auxImport">导入</button>
+            <button type="button" class="sb-btn" id="auxRefresh">刷新</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-table-wrap">
+        <table class="sb-table aux-table">
+          <thead>
+            <tr>
+              <th>邮箱</th>
+              <th>IMAP 服务器</th>
+              <th>端口</th>
+              <th>凭据</th>
+              <th>导入时间</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="auxBody"></tbody>
+        </table>
+      </div>
+      <div class="sb-empty hidden" id="auxEmpty">还没有辅助邮箱。微软登录要求恢复邮箱验证码时，把恢复邮箱（邮箱----密码/授权码）导入这里即可自动收码。</div>
     </section>
-
-    <div class="sb-controls">
-      <div class="sb-field sb-field--grow">
-        <label class="sb-field-label" for="auxLines">批量导入</label>
-        <textarea id="auxLines" rows="4" spellcheck="false"
-          placeholder="每行一个：邮箱----密码或IMAP授权码----IMAP服务器(可省略)&#10;例如：sb12345@163.com----abcd1234&#10;服务器省略时按域名自动推断（163→imap.163.com，QQ→imap.qq.com）"></textarea>
-      </div>
-      <div class="sb-field">
-        <label class="sb-field-label">&nbsp;</label>
-        <button type="button" class="btn primary" id="auxImport">导入</button>
-      </div>
-      <div class="sb-field">
-        <label class="sb-field-label">&nbsp;</label>
-        <button type="button" class="btn" id="auxRefresh">刷新</button>
-      </div>
-    </div>
-    <div class="sb-note" id="auxNote"></div>
-
-    <div class="sb-table-wrap">
-      <table class="sb-table">
-        <thead>
-          <tr>
-            <th>邮箱</th>
-            <th>IMAP 服务器</th>
-            <th>端口</th>
-            <th>凭据</th>
-            <th>导入时间</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="auxBody"></tbody>
-      </table>
-    </div>
   </div>
 
   <!-- ============ 配置 ============ -->
@@ -7733,19 +7767,22 @@ async function loadAuxEmails() {
 
 function auxRender() {
   const body = $('#auxBody');
+  const empty = $('#auxEmpty');
   if (!body) return;
   if (!AUX_EMAILS.length) {
-    body.innerHTML = '<tr><td colspan="6" class="sb-empty">还没有辅助邮箱。微软登录要求恢复邮箱验证码时，把恢复邮箱（邮箱----密码/授权码）导入这里即可自动收码。</td></tr>';
+    body.innerHTML = '';
+    if (empty) empty.classList.remove('hidden');
     return;
   }
+  if (empty) empty.classList.add('hidden');
   body.innerHTML = AUX_EMAILS.map(r => `
     <tr>
-      <td class="sb-mono">${esc(r.email)}</td>
-      <td class="sb-mono">${esc(r.server)}</td>
-      <td class="sb-num">${esc(r.port || 993)}</td>
-      <td>${r.has_password ? '已配置' : '<span style="color:var(--red)">缺失</span>'}</td>
-      <td class="sb-mono">${esc(String(r.created_at || '').replace('T', ' ').slice(0, 19))}</td>
-      <td><button type="button" class="danger" data-aux-del="${esc(r.id)}">删除</button></td>
+      <td class="aux-mono">${esc(r.email)}</td>
+      <td class="aux-mono">${esc(r.server)}</td>
+      <td>${esc(r.port || 993)}</td>
+      <td>${r.has_password ? '<span class="sb-badge sb-badge--ok">已配置</span>' : '<span class="sb-badge sb-badge--warn">缺失</span>'}</td>
+      <td class="aux-mono">${esc(String(r.created_at || '').replace('T', ' ').slice(0, 19))}</td>
+      <td><button type="button" class="btn-danger-sm" data-aux-del="${esc(r.id)}">删除</button></td>
     </tr>`).join('');
 }
 
