@@ -26,6 +26,11 @@ from core.openai_auth import (
     send_email_otp,
     network_preflight,
     navigate_about_you,
+    navigate_create_account_password,
+    navigate_email_otp_send,
+    request_password_sentinel_bundle,
+    generate_registration_password,
+    register_user,
     EmailOtpInvalidError,
     create_account,
 )
@@ -165,11 +170,11 @@ def run_registration(
     on_email_acquired: Callable[[str], None] | None = None,
 ):
     """
-    执行完整的 ChatGPT 注册流程（OTP-only，无密码）。
+    执行完整的 ChatGPT 邮箱密码注册流程。
 
     OpenAI 当前默认流程：signin 时携带 login_hint+screen_hint=login_or_signup
-    → follow_authorize 重定向链自动落到 /email-verification 并触发 OTP 发送
-    → 用户输入验证码 → validate_email_otp → about-you 提交昵称生日 → 完成。
+    → 进入 /create-account/password 并提交密码 → 发送并验证邮箱 OTP
+    → about-you 提交昵称生日 → 完成。
 
     Args:
         email: 注册邮箱
@@ -269,6 +274,7 @@ def run_registration(
     logger.debug(f"[注册] 设备ID={session.device_id}，会话日志ID={session.auth_session_logging_id}")
 
     create_acknowledged = False
+    registration_password = None
     try:
         # 网络预检必须在 signin/follow_authorize 之前完成；预检不带邮箱，不会触发 OTP。
         network_preflight(session)
@@ -296,16 +302,32 @@ def run_registration(
         authorize_url = signin_openai(session, csrf_token, email)
         human_delay("api")
 
-        # 记录"OTP 触发"前的时间戳，自动取信箱时只看此后的邮件，
-        # 避免取到上次注册留下的旧 OTP。
-        otp_after_ts = time.time()
-
         # ==================== 阶段2: OpenAI Auth ====================
         # 步骤4: 跟随 authorize URL（建立 auth.openai.com 的 cookies）
-        # 由于步骤3已携带 login_hint + screen_hint=login_or_signup，
-        # 重定向链会直接走到 /email-verification 并自动触发 OTP 发送，
-        # 不需要 /create-account/password、register_user、单独 send_email_otp 调用。
-        follow_authorize(session, authorize_url)
+        authorize_final_url = follow_authorize(session, authorize_url)
+        human_delay("navigate")
+
+        # 步骤5-8: 强制走邮箱+密码注册，不使用 passwordless OTP-only 分支。
+        navigate_create_account_password(session, authorize_final_url)
+        human_delay("navigate")
+        registration_password = generate_registration_password()
+        password_sentinel = request_password_sentinel_bundle(session)
+        password_sentinel_header, password_so_header = build_sentinel_header(
+            session, password_sentinel, "username_password_create"
+        )
+        human_delay("challenge")
+        register_result = register_user(
+            session,
+            email,
+            registration_password,
+            password_sentinel_header,
+            password_so_header,
+        )
+        create_acknowledged = True
+
+        # 只读取本次发送之后到达的验证码，避免误取历史邮件。
+        otp_after_ts = time.time()
+        navigate_email_otp_send(session, register_result.get("continue_url"))
         human_delay("navigate")
 
         # ==================== 阶段3: 验证码验证 ====================
@@ -511,6 +533,7 @@ def run_registration(
                 "device_id": session.device_id,
                 "sentinel_sid": getattr(session, "sentinel_sid", None),
                 "browser_profile": getattr(session, "browser_profile", None),
+                "registration_password": registration_password,
                 "codex": codex_result,
             },
         )

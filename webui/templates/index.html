@@ -748,7 +748,7 @@
     .accounts-table-v2 .col-source { width: 90px; }
     .accounts-table-v2 .col-token { width: 100px; }
     .accounts-table-v2 .col-password { width: 120px; }
-    .accounts-table-v2 .col-plan { width: 120px; }
+    .accounts-table-v2 .col-plan { width: 220px; }
     .accounts-table-v2 .col-note { width: 140px; }
     .accounts-table-v2 .col-small { width: 170px; }
     .accounts-table-v2 .col-status { width: 100px; }
@@ -828,6 +828,17 @@
     }
     .accounts-table-v2 .pill.status-running {
       color: #fa8c16; background: var(--warning-soft); border-color: #ffd591;
+    }
+    .accounts-table-v2 .plan-promo-stack {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+      width: 100%; white-space: normal;
+    }
+    .accounts-table-v2 .plan-promo-head {
+      display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    }
+    .accounts-table-v2 .plan-promo-stack .pill {
+      height: auto; min-height: 26px; max-width: 100%; line-height: 1.3;
+      text-align: left; white-space: normal; overflow-wrap: anywhere;
     }
     .accounts-table-v2 .acc-v2-token-copy {
       display: inline-flex; align-items: center; justify-content: center;
@@ -2446,9 +2457,15 @@
             </span>
           </label>
           <button type="button" class="acc-v2-toggle" id="showArchivedAccountsV2" aria-pressed="false" title="默认只显示未归档账号；开启后单独查看归档账号">查看归档</button>
-          <button type="button" class="acc-v2-toggle" id="showPlusAccountsOnlyV2" aria-pressed="false" title="只查询/显示已开通 Plus 的账号">已开通Plus</button>
-          <button type="button" class="acc-v2-toggle" id="showPlusTrialAccountsOnlyV2" aria-pressed="false" title="只查询/显示当前为 free 且可试用 Plus 的账号">可试用Plus</button>
-          <button type="button" class="acc-v2-toggle" id="showFreeAccountsOnlyV2" aria-pressed="false" title="只查询/显示已明确不能试用 Plus 的 free 账号；资格未知的账号不包含">free不可试用Plus</button>
+          <button type="button" class="acc-v2-toggle" id="showPlusAccountsOnlyV2" aria-pressed="false" title="只查询/显示已开通套餐的账号">已开通套餐</button>
+          <button type="button" class="acc-v2-toggle" id="showPlusTrialAccountsOnlyV2" aria-pressed="false" title="只查询/显示当前为 free 且存在 eligible_promo_campaigns 套餐优惠的账号，不限 Plus">有套餐优惠</button>
+          <label class="acc-v2-inline" title="指定 eligible_promo_campaigns 中的套餐类型；留空表示全部优惠类型">优惠类型
+            <select id="promoTypeFilterV2"><option value="">全部</option><option value="plus">Plus</option><option value="pro">Pro</option><option value="go">Go</option><option value="team">Team</option><option value="business">Business</option></select>
+          </label>
+          <label class="acc-v2-inline" title="按 eligible_promo_campaigns 优惠百分比筛选">优惠力度
+            <select id="promoDiscountFilterV2"><option value="">全部</option><option value="100">100%优惠</option></select>
+          </label>
+          <button type="button" class="acc-v2-toggle" id="showFreeAccountsOnlyV2" aria-pressed="false" title="只查询/显示已明确不能试用套餐的 free 账号；资格未知的账号不包含">free不可试用套餐</button>
           <label class="acc-v2-inline" title="按账号状态筛选账号">
             <select id="codexStatusFilterV2">
               <option value="">全部状态</option>
@@ -3670,7 +3687,11 @@ function getCodexBulkWorkers() {
 }
 function getAccountsPlanFilter() {
   if (SHOW_PLUS_ACCOUNTS_ONLY) return 'plus';
-  if (SHOW_PLUS_TRIAL_ACCOUNTS_ONLY) return 'plus_trial';
+  if (SHOW_PLUS_TRIAL_ACCOUNTS_ONLY) {
+    const type = (document.getElementById('promoTypeFilterV2')?.value || '').trim().toLowerCase();
+    const discount = (document.getElementById('promoDiscountFilterV2')?.value || '').trim();
+    return (type || discount) ? `promo:${type || '*'}:${discount}` : 'promo';
+  }
   if (SHOW_FREE_ACCOUNTS_ONLY) return 'free_no_trial';
   return '';
 }
@@ -3833,6 +3854,42 @@ function _discountLabel(r) {
   if (!Number.isNaN(n)) return `${n}折扣`;
   return `${amount}折扣`;
 }
+function _promoPlanName(key, campaign) {
+  const meta = (campaign && typeof campaign === 'object' && campaign.metadata && typeof campaign.metadata === 'object') ? campaign.metadata : {};
+  const raw = String(meta.plan_name || key || '套餐').trim();
+  const known = {
+    chatgptplusplan:'Plus', chatgptproplan:'Pro', chatgptteamplan:'Team',
+    chatgptbusinessplan:'Business', chatgptgoplan:'Go', plus:'Plus', pro:'Pro',
+    team:'Team', business:'Business', go:'Go'
+  };
+  const normalized = raw.toLowerCase().replace(/[\s_-]/g, '');
+  if (known[normalized]) return known[normalized];
+  return raw.replace(/^chatgpt/i, '').replace(/plan$/i, '') || raw;
+}
+function _promoDurationLabel(duration) {
+  if (!duration || typeof duration !== 'object' || duration.num_periods == null) return '';
+  const n = duration.num_periods;
+  const period = String(duration.period || '').toLowerCase();
+  const unit = period === 'month' ? '个月' : period === 'year' ? '年' : period === 'week' ? '周' : period === 'day' ? '天' : period;
+  return `${n}${unit}`;
+}
+function _promoSummaries(campaigns) {
+  if (!campaigns || typeof campaigns !== 'object') return [];
+  return Object.entries(campaigns).map(([key, campaign]) => {
+    const meta = (campaign && typeof campaign === 'object' && campaign.metadata && typeof campaign.metadata === 'object') ? campaign.metadata : {};
+    const percentage = meta.discount && meta.discount.percentage;
+    const offer = percentage !== undefined && percentage !== null && percentage !== ''
+      ? (Number(percentage) === 100 ? '免费' : `${percentage}%折扣`)
+      : String(meta.promotion_type_label || meta.title || (campaign && campaign.id) || '有优惠');
+    const duration = _promoDurationLabel(meta.duration);
+    return `${_promoPlanName(key, campaign)}：${offer}${duration ? `/${duration}` : ''}`;
+  });
+}
+function _promoStackHtml(baseText, baseClass, summaries, title, detailBtn = '') {
+  const base = `<span class="pill ${baseClass}" title="${esc(title)}">${esc(baseText)}</span>`;
+  const lines = summaries.map(item => `<span class="pill status-success" title="${esc(item)}">${esc(item)}</span>`).join('');
+  return `<div class="plan-promo-stack"><div class="plan-promo-head">${base}${detailBtn}</div>${lines}</div>`;
+}
 function _planCell(r) {
   const ok = r.plan_check_ok;
   const err = r.plan_check_error || '';
@@ -3843,6 +3900,8 @@ function _planCell(r) {
     route === 'direct_fallback' ? `网络: 直连回退${r.plan_check_proxy_fallback_reason ? ` (${r.plan_check_proxy_fallback_reason})` : ''}` :
     route === 'direct' ? '网络: 直连' : '';
   const title = [err ? esc(err) : checked, routeLabel].filter(Boolean).join('；');
+  const campaigns = (r.eligible_promo_campaigns && typeof r.eligible_promo_campaigns === 'object') ? r.eligible_promo_campaigns : {};
+  const promoSummaries = _promoSummaries(campaigns);
   if (['queued','running'].includes(r.plan_check_status)) {
     const automatic = r.plan_check_trigger === 'registration_auto';
     const queued = r.plan_check_status === 'queued';
@@ -3854,7 +3913,7 @@ function _planCell(r) {
   if (err || r.plan_check_status === 'failed') {
     const reason = err || '套餐查询失败，未返回具体原因';
     const hasLastSuccess = Boolean(r.plan_last_success_at);
-    const lastPlan = hasLastSuccess ? `${plan}${r.plus_trial_eligible ? '/可Plus试用' : ''}` : '';
+    const lastPlan = hasLastSuccess ? `${plan}${promoSummaries.length ? `（${promoSummaries.join('；')}）` : ''}` : '';
     const lastText = lastPlan ? `（上次: ${lastPlan}）` : '';
     const lastTitle = hasLastSuccess ? `上次成功: ${esc(r.plan_last_success_at)}` : '';
     return `<div class="extract-link-cell"><span class="pill status-failed" title="${[esc(reason), lastTitle].filter(Boolean).join('；')}">查询失败${esc(lastText)}</span><div class="extract-link-error" title="${esc(reason)}">${esc(reason)}</div></div>`;
@@ -3866,14 +3925,11 @@ function _planCell(r) {
     if (!checkedOk) {
       return `<span class="pill status-running" title="${title}">${esc(plan)}（待查资格）</span>`;
     }
-    const trialDiscount = r.plus_trial_discount_percentage != null && r.plus_trial_discount_percentage !== '' ? ` ${r.plus_trial_discount_percentage}%折扣` : '';
-    const text = r.plus_trial_eligible ? `free(可Plus试用${trialDiscount})` : 'free';
-    const cls = r.plus_trial_eligible ? 'status-success' : 'status-used';
-    const t = r.plus_trial_eligible ? `${title}；Plus 试用资格可用` : title;
-    const campaigns = (r.eligible_promo_campaigns && typeof r.eligible_promo_campaigns === 'object') ? r.eligible_promo_campaigns : {};
+    const cls = promoSummaries.length ? 'status-success' : 'status-used';
+    const t = promoSummaries.length ? `${title}；可用套餐优惠：${promoSummaries.join('；')}` : title;
     const keys = Object.keys(campaigns);
     const detailBtn = keys.length ? `<button type="button" class="promo-detail-btn" data-promo-details="${esc(JSON.stringify(campaigns))}">详情(${keys.length})</button>` : '';
-    return `<span class="pill ${cls}" title="${t}">${esc(text)}</span>${detailBtn}`;
+    return _promoStackHtml('free', cls, promoSummaries, t, detailBtn);
   }
 
   const cls = 'status-success';
@@ -3892,7 +3948,7 @@ function _planCell(r) {
   if (r.plan_renews_at) detail.push(`续费时间: ${r.plan_renews_at}`);
   if (r.discount_expires_at) detail.push(`折扣结束: ${r.discount_expires_at}`);
   if (r.discount_promo_campaign_id) detail.push(`优惠: ${r.discount_promo_campaign_id}`);
-  return `<span class="pill ${cls}" title="${esc(detail.join('；'))}">${esc(text)}</span>`;
+  return _promoStackHtml(text, cls, promoSummaries, detail.join('；'));
 }
 function _planAction(r) {
   if (['queued','running'].includes(r.plan_check_status)) {
@@ -4563,6 +4619,14 @@ async function refreshAccountsList(btn) {
   const plusTrialV2 = $('#showPlusTrialAccountsOnlyV2');
   if (plusTrialV2) plusTrialV2.addEventListener('click', () => {
     applyAccountsPlusTrialFilter(!SHOW_PLUS_TRIAL_ACCOUNTS_ONLY);
+  });
+  const promoTypeV2 = $('#promoTypeFilterV2');
+  if (promoTypeV2) promoTypeV2.addEventListener('change', () => {
+    applyAccountsPlusTrialFilter(true);
+  });
+  const promoDiscountV2 = $('#promoDiscountFilterV2');
+  if (promoDiscountV2) promoDiscountV2.addEventListener('change', () => {
+    applyAccountsPlusTrialFilter(true);
   });
   const freeV2 = $('#showFreeAccountsOnlyV2');
   if (freeV2) freeV2.addEventListener('click', () => {
