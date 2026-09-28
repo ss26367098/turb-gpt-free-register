@@ -515,14 +515,22 @@ def _fill_microsoft_login_if_present(driver, email: str, timeout: int = 20) -> b
     那里要填邮箱本体密码，之后可能弹“保持登录状态？”，确认后自动跳回
     auth.openai.com 完成 OAuth。返回 True 表示已处理完并离开微软页。
     """
-    # 阶段 1：等微软页出现。重定向经代理时可能要二三十秒才落到 login.live.com，
-    # 这里等满 timeout，不能因为中途还在 auth.openai.com 就提前放弃。
+    # 阶段 1：等微软页出现。重定向经代理时最慢实测 ~75s 才落到 login.live.com，
+    # 所以窗口要给足；但 OpenAI 自己的 OTP/密码页先渲染出来就说明这次不跳微软，
+    # 立即退出，普通账号不用陪等。
     end = time.time() + timeout
+    next_note = time.time() + 15
     seen = False
     while time.time() < end:
         if _is_microsoft_sso_page(driver):
             seen = True
             break
+        if _is_email_verification_page(driver) or _is_login_password_page(driver):
+            logger.info("[Codex][Browser] OpenAI 自身验证页已出现，本次不跳微软登录")
+            return False
+        if time.time() > next_note:
+            logger.info("[Codex][Browser] 等待微软重定向（hotmail 经代理较慢，已等 %.0fs）", timeout - (end - time.time()))
+            next_note = time.time() + 15
         time.sleep(0.4)
     if not seen:
         return False
@@ -606,20 +614,26 @@ def _fill_microsoft_login_if_present(driver, email: str, timeout: int = 20) -> b
         return False
 
     # 阶段 3：等离开微软域；期间可能再弹“保护账号”（恢复邮箱验证码）或“保持登录状态？”
+    # 密码提交后经代理跳回 OpenAI 最慢实测 ~2 分钟，窗口给 150s，期间每 15s 报一次进度。
     human_delay("navigate")
-    end = time.time() + 25
+    next_note = time.time() + 15
+    end = time.time() + 150
     while time.time() < end:
         if not _is_microsoft_sso_page(driver):
             logger.info("[Codex][Browser] 微软登录完成，已返回 OpenAI 授权流程")
             return True
         state = (driver.execute_script(_MS_STATE_JS) or {})
-        if state.get("protect") and state.get("masked") and not state.get("use_pw"):
+        if state.get("protect") and state.get("masked"):
             # 密码提交后弹的二次验证：收码可能要一两分钟，成功后重置离开等待
             if _fill_microsoft_protect_code(driver, str(state.get("masked"))):
-                end = time.time() + 25
+                end = time.time() + 150
                 continue
             logger.warning("[Codex][Browser] 恢复邮箱验证码未处理，微软登录无法继续")
             return False
+        if time.time() > next_note:
+            logger.info("[Codex][Browser] 等待微软登录完成跳回 OpenAI（已等 %.0fs，state=%s）",
+                        150 - (end - time.time()), {k: v for k, v in state.items() if v})
+            next_note = time.time() + 15
         if state.get("primary") and not state.get("pw") and not state.get("use_pw"):
             try:
                 btn = driver.find_element("css selector", "#idSIButton9")
@@ -652,7 +666,9 @@ def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None
         _submit_email_step(driver)
         logger.info("[Codex][Browser] 已提交邮箱，等待邮箱 OTP 页面")
         # 重定向到 login.live.com 经代理最慢观察到 ~45s，等待窗口必须覆盖它
-        if _fill_microsoft_login_if_present(driver, email, timeout=60):
+        # 重定向到 login.live.com 经荷兰代理最慢实测 73s，等待窗口必须覆盖它；
+        # OpenAI 自身验证页出现时会提前退出，普通账号不会陪等。
+        if _fill_microsoft_login_if_present(driver, email, timeout=120):
             logger.info("[Codex][Browser] 微软 SSO 登录已处理，进入后续授权步骤")
             return
         pw_result = _fill_login_password_if_present(driver, email, timeout=18)
@@ -690,7 +706,7 @@ def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None
             human_delay("form")
             _submit_email_step(driver)
             logger.info("[Codex][Browser] 已重新提交邮箱触发 OTP")
-            if _fill_microsoft_login_if_present(driver, email, timeout=12):
+            if _fill_microsoft_login_if_present(driver, email, timeout=120):
                 logger.info("[Codex][Browser] 重新提交邮箱后走微软 SSO 登录，进入后续授权步骤")
                 return
             pw_result = _fill_login_password_if_present(driver, email, timeout=12)
