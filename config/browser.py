@@ -50,6 +50,10 @@ USER_AGENT = (
     f"Chrome/{CHROME_FULL_VERSION} Safari/{SAFARI_WEBKIT_VERSION}"
 )
 
+# 注意：上游已切到 chrome146（需 curl_cffi>=0.15）。macOS 27 上 0.15+ 的 wheel
+# 无法加载（见 requirements.txt），本机固定 0.14.0 只支持到 chrome136，
+# 因此 IMPERSONATE 与下面的 Client Hints 均按 chrome136 输出。
+# SEC_CH_UA 品牌顺序需与 curl_cffi chrome136 实际发出的顺序一致，避免冲突。
 SEC_CH_UA = '"Google Chrome";v="136", "Chromium";v="136", "Not)A;Brand";v="24"'
 SEC_CH_UA_FULL_VERSION_LIST = '"Google Chrome";v="136.0.0.0", "Chromium";v="136.0.0.0", "Not)A;Brand";v="24.0.0.0"'
 SEC_CH_UA_PLATFORM = '"macOS"'
