@@ -449,12 +449,16 @@ def _fill_microsoft_protect_code(driver, masked_email: str) -> bool:
 
 
 def _is_microsoft_sso_page(driver) -> bool:
-    """是否停在微软 SSO 登录页（OpenAI 会把 hotmail/outlook 等微软域邮箱重定向过去）。"""
+    """是否停在微软 SSO 登录页（OpenAI 会把 hotmail/outlook 等微软域邮箱重定向过去）。
+
+    account.live.com 是密码提交后可能弹出的「服务条款确认」页（/tou/accrue），
+    也算微软域：没回 auth.openai.com 之前都归微软登录流程管。
+    """
     try:
         url = str(driver.current_url or "").lower()
     except Exception:
         url = ""
-    return "login.live.com" in url or "login.microsoftonline.com" in url
+    return "login.live.com" in url or "login.microsoftonline.com" in url or "account.live.com" in url
 
 
 def _account_mailbox_password_for_email(email: str) -> str:
@@ -500,15 +504,36 @@ const text = document.body ? document.body.innerText : '';
 const protect = /help us protect|protect your account|verify your email|セキュリティ コード|验证你的电子邮箱|保护你的帐户/i.test(text);
 const maskedMatch = text.match(/([A-Za-z0-9._%+-]{1,3})\*{2,}@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
 const codeInput = [...document.querySelectorAll('input[type="tel"],input[inputmode="numeric"],input[name*="otc" i],input[name*="code" i],input[maxlength]')].find(visible);
+const tou = /account\.live\.com\/tou|\/tou\/accrue/.test(location.href);
 return {
   pw: !!pw, primary: !!(primary && visible(primary)), use_pw: !!usePw,
   protect: protect, masked: maskedMatch ? (maskedMatch[1] + '*****@' + maskedMatch[2]) : '',
-  code_input: !!codeInput,
+  code_input: !!codeInput, tou: tou,
 };
 """
 
 
-def _fill_microsoft_login_if_present(driver, email: str, timeout: int = 20) -> bool:
+# 「服务条款确认」页（account.live.com/tou）没有统一的按钮 id，按控件类型+文字找：
+# 先勾上未选中的同意复选框，再点「接受/继续/同意」类提交按钮。
+_MS_TOU_ACCEPT_JS = r"""
+const visible = el => !!el && !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length)
+  && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none'
+  && !el.disabled;
+const box = [...document.querySelectorAll('input[type="checkbox"]')].find(visible);
+if (box && !box.checked) { box.click(); }
+const want = /accept|agree|continue|next|submit|接受|同意|继续|次へ|同意する|続行/i;
+const cands = [...document.querySelectorAll('input[type="submit"],input[type="button"],button,[role="button"]')]
+  .filter(visible);
+let btn = cands.find(el => want.test(String(el.value || el.textContent || '').trim()))
+  || cands.sort((a, b) => (b.value || b.textContent || '').length - (a.value || a.textContent || '').length)[0];
+if (btn) { btn.click(); return {ok: true, label: String(btn.value || btn.textContent || '').trim().slice(0, 40)}; }
+const form = document.querySelector('form');
+if (form) { form.submit(); return {ok: true, label: 'form.submit()'}; }
+return {ok: false, reason: 'no button'};
+"""
+
+
+def _fill_microsoft_login_if_present(driver, email: str, timeout: int = 20, auth_url: str = "") -> bool:
     """处理提交邮箱后被重定向到微软 SSO 登录页的情况。
 
     OpenAI 会把身份源为微软的邮箱（hotmail/outlook/live）转到 login.live.com，
@@ -577,6 +602,14 @@ def _fill_microsoft_login_if_present(driver, email: str, timeout: int = 20) -> b
                 logger.info("[Codex][Browser] 微软页为“验证邮箱”页，已点击“使用密码登录”入口")
                 human_delay("form", minimum=1.2, maximum=2.2)
                 continue
+        # 「服务条款确认」页（account.live.com/tou）：点主按钮（接受/继续）即可通过
+        if state.get("tou"):
+            clicked = (driver.execute_script(_MS_TOU_ACCEPT_JS) or {})
+            if clicked.get("ok"):
+                logger.info("[Codex][Browser] 微软「服务条款」页，已点击接受/继续（%s）", clicked.get("label") or "")
+                human_delay("form", minimum=1.5, maximum=2.5)
+                continue
+            logger.warning("[Codex][Browser] 服务条款页没找到可点按钮：%s", clicked.get("reason") or "")
         # 「保护账号」页：验证码发恢复邮箱，用辅助邮箱池收码。优先级高于主按钮——
         # 这种页面的主按钮就是 Send code，没有辅助邮箱收码，点了也白点。
         if state.get("protect") and state.get("masked"):
@@ -614,26 +647,76 @@ def _fill_microsoft_login_if_present(driver, email: str, timeout: int = 20) -> b
         return False
 
     # 阶段 3：等离开微软域；期间可能再弹“保护账号”（恢复邮箱验证码）或“保持登录状态？”
-    # 密码提交后经代理跳回 OpenAI 最慢实测 ~2 分钟，窗口给 150s，期间每 15s 报一次进度。
+    # 密码提交后经代理跳回 OpenAI 最慢实测 ~2.5 分钟，窗口给 240s，期间每 15s 报一次进度。
     human_delay("navigate")
     next_note = time.time() + 15
-    end = time.time() + 150
+    end = time.time() + 240
+    stuck_since = None
+    reauth_done = False
     while time.time() < end:
         if not _is_microsoft_sso_page(driver):
             logger.info("[Codex][Browser] 微软登录完成，已返回 OpenAI 授权流程")
             return True
         state = (driver.execute_script(_MS_STATE_JS) or {})
+        if state.get("tou"):
+            clicked = (driver.execute_script(_MS_TOU_ACCEPT_JS) or {})
+            if clicked.get("ok"):
+                logger.info("[Codex][Browser] 微软「服务条款」页，已点击接受/继续（%s）", clicked.get("label") or "")
+                human_delay("form", minimum=1.5, maximum=2.5)
+                continue
+            logger.warning("[Codex][Browser] 服务条款页没找到可点按钮：%s", clicked.get("reason") or "")
         if state.get("protect") and state.get("masked"):
             # 密码提交后弹的二次验证：收码可能要一两分钟，成功后重置离开等待
             if _fill_microsoft_protect_code(driver, str(state.get("masked"))):
-                end = time.time() + 150
+                end = time.time() + 240
                 continue
             logger.warning("[Codex][Browser] 恢复邮箱验证码未处理，微软登录无法继续")
             return False
         if time.time() > next_note:
-            logger.info("[Codex][Browser] 等待微软登录完成跳回 OpenAI（已等 %.0fs，state=%s）",
-                        150 - (end - time.time()), {k: v for k, v in state.items() if v})
+            diag = (driver.execute_script(
+                "return {url: location.href.slice(0, 110), title: document.title.slice(0, 60), rs: document.readyState};") or {})
+            logger.info("[Codex][Browser] 等待微软登录完成跳回 OpenAI（已等 %.0fs，state=%s，页面=%s）",
+                        240 - (end - time.time()), {k: v for k, v in state.items() if v}, diag)
             next_note = time.time() + 15
+        # 阶段3再要密码（自愈重开后 MS 会话未生效时）：重新填一次
+        if state.get("pw"):
+            try:
+                pw_input = driver.find_element("css selector", "input[type='password'],input[name='passwd']")
+                _human_type_text(driver, pw_input, password, clear=True)
+                human_delay("form", minimum=2.0, maximum=3.6)
+                try:
+                    btn = driver.find_element("css selector", "#idSIButton9")
+                    _human_click(driver, btn, label="codex_microsoft_signin_p3")
+                except Exception:
+                    driver.execute_script(
+                        "const f=arguments[0].form; f ? f.submit() : arguments[0].click();", pw_input)
+                logger.info("[Codex][Browser] 阶段3重新填写并提交微软登录密码：%s", email)
+                human_delay("navigate")
+                continue
+            except Exception as exc:
+                logger.warning("[Codex][Browser] 阶段3补填微软密码失败：%s", str(exc)[:120])
+        # 空白卡死自愈：登录后页面长期无任何可交互元素（代理下偶发的空白挂起），
+        # 重开一次授权地址并重新提交邮箱——微软会话已建立，通常静默 302 回 OpenAI。
+        if not any(state.get(k) for k in ("pw", "use_pw", "protect", "primary", "code_input", "tou")):
+            if stuck_since is None:
+                stuck_since = time.time()
+            elif time.time() - stuck_since > 90 and auth_url and not reauth_done:
+                reauth_done = True
+                logger.warning("[Codex][Browser] 微软页超过 90s 空白无元素，重开授权地址并重新提交邮箱，让微软会话静默通过")
+                try:
+                    driver.get(auth_url)
+                    human_delay("navigate")
+                    _maybe_accept(driver)
+                    _type_email_address(driver, email, timeout=12)
+                    human_delay("form")
+                    _submit_email_step(driver)
+                    logger.info("[Codex][Browser] 自愈：已重新提交邮箱，等待微软静默放行")
+                except Exception as exc:
+                    logger.info("[Codex][Browser] 自愈重开后无需邮箱输入（可能已直接进入授权页）：%s", str(exc)[:140])
+                end = time.time() + 180
+                stuck_since = None
+        else:
+            stuck_since = None
         if state.get("primary") and not state.get("pw") and not state.get("use_pw"):
             try:
                 btn = driver.find_element("css selector", "#idSIButton9")
@@ -668,7 +751,7 @@ def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None
         # 重定向到 login.live.com 经代理最慢观察到 ~45s，等待窗口必须覆盖它
         # 重定向到 login.live.com 经荷兰代理最慢实测 73s，等待窗口必须覆盖它；
         # OpenAI 自身验证页出现时会提前退出，普通账号不会陪等。
-        if _fill_microsoft_login_if_present(driver, email, timeout=120):
+        if _fill_microsoft_login_if_present(driver, email, timeout=120, auth_url=auth_url):
             logger.info("[Codex][Browser] 微软 SSO 登录已处理，进入后续授权步骤")
             return
         pw_result = _fill_login_password_if_present(driver, email, timeout=18)
@@ -706,7 +789,7 @@ def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None
             human_delay("form")
             _submit_email_step(driver)
             logger.info("[Codex][Browser] 已重新提交邮箱触发 OTP")
-            if _fill_microsoft_login_if_present(driver, email, timeout=120):
+            if _fill_microsoft_login_if_present(driver, email, timeout=120, auth_url=auth_url):
                 logger.info("[Codex][Browser] 重新提交邮箱后走微软 SSO 登录，进入后续授权步骤")
                 return
             pw_result = _fill_login_password_if_present(driver, email, timeout=12)
@@ -740,8 +823,19 @@ def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None
         except Exception as exc:
             # OTP 等待的 90s 里页面可能已经落到微软 SSO 登录页（那是等不到邮件验证码的），
             # 先补一次微软页检查再决定是否重发。
-            if _fill_microsoft_login_if_present(driver, email, timeout=5):
+            if _fill_microsoft_login_if_present(driver, email, timeout=5, auth_url=auth_url):
                 logger.info("[Codex][Browser] OTP 等待期间落在微软登录页，已处理登录")
+                return
+            # 微软登录慢回程：等 OTP 期间可能已经回到 OpenAI 授权/确认页，
+            # 此时邮箱 OTP 永远等不到，直接进入后续授权步骤。
+            try:
+                cur_url = str(driver.current_url or "").lower()
+            except Exception:
+                cur_url = ""
+            if ("auth.openai.com" in cur_url or "chatgpt.com" in cur_url or "localhost" in cur_url) \
+                    and "auth.openai.com/log-in" not in cur_url \
+                    and not _is_email_verification_page(driver) and not _is_login_password_page(driver):
+                logger.info("[Codex][Browser] 页面已回到 OpenAI 授权流程（微软登录完成），不再等邮箱 OTP")
                 return
             if otp_attempt >= max_otp_attempts:
                 raise
