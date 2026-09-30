@@ -135,6 +135,17 @@ def _extract_callback_url_from_page(driver) -> str:
                 return str(url)
     except Exception as exc:
         logger.debug("[Codex][Browser] 从页面提取 callback URL 失败：%s", exc)
+    # 兜底：跳到 localhost 回调但本地无监听时，页面是 chrome-error://，失败导航
+    # 不会出现在该文档的 performance 记录里；浏览器级导航历史仍保留原 URL。
+    try:
+        history = driver.execute_cdp_cmd("Page.getNavigationHistory", {})
+        for entry in (history or {}).get("entries", []) or []:
+            url = str(entry.get("url") or "")
+            if _is_callback_url(url):
+                logger.info("[Codex][Browser] 已从浏览器导航历史提取 callback URL：%s", url[:160])
+                return url
+    except Exception as exc:
+        logger.debug("[Codex][Browser] 从导航历史提取 callback URL 失败：%s", exc)
     return ""
 
 
@@ -1706,14 +1717,31 @@ def _do_phone_verification_if_present(driver) -> None:
             pass
 
 
-def _finish_consent_workspace(driver) -> str:
+def _finish_consent_workspace(driver, auth_url: str = "") -> str:
     """点击 Codex consent/workspace 页面里的继续/允许按钮，直到 callback。"""
     end = time.time() + int(_roxy_cfg.ROXY_CODEX_CALLBACK_TIMEOUT)
+    error_since = None
+    reopened = False
     while time.time() < end:
         callback = _extract_callback_url_from_any_window(driver)
         if callback:
             return callback
         current = str(driver.current_url or "")
+        # 授权页走到 chrome-error（代理断连/本地回调无监听）且提取不到 callback 时，
+        # 会话已建立：重开一次授权地址，通常直接静默跳到 callback。
+        if current.startswith("chrome-error://"):
+            if error_since is None:
+                error_since = time.time()
+            elif time.time() - error_since > 30 and auth_url and not reopened:
+                reopened = True
+                logger.warning("[Codex][Browser] 授权页停在 Chrome 错误页，重开授权地址重试")
+                try:
+                    driver.get(auth_url)
+                except Exception:
+                    pass
+                human_delay("navigate")
+        else:
+            error_since = None
         clicked = False
         for selectors in [
             ["//button[contains(., 'Allow')]", "//button[contains(., 'Authorize')]", "//button[contains(., 'Continue')]"],
@@ -1834,7 +1862,7 @@ def _run_roxy_codex_oauth_once(
         logger.info("[Codex][Browser] 检查是否需要手机号验证")
         _do_phone_verification_if_present(driver)
         logger.info("[Codex][Browser] 手机验证处理完成/无需处理，等待授权确认和 callback")
-        callback_url = _finish_consent_workspace(driver)
+        callback_url = _finish_consent_workspace(driver, auth_url=auth_url)
         code = proto._extract_code(callback_url, state)
         logger.info("[Codex][Browser] 已捕获 callback code：%s...", code[:24])
 
