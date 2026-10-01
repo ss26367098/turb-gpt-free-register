@@ -388,6 +388,43 @@ def _fill_login_password_if_present(driver, email: str, timeout: int = 18) -> st
     return None
 
 
+def _fill_microsoft_confirm_email(driver, masked_email: str) -> bool:
+    """处理微软「确认您的电子邮箱」页（Bestätigen Sie Ihre E-Mail-Adresse 等）。
+
+    这种页面要求把恢复邮箱的完整地址手动输进去证明所有权（掩码只显示
+    sb*****@163.com），输对了才发验证码。完整地址从「辅助邮箱」池按掩码
+    匹配；没有匹配项无法继续，直接抛 AuxMailRequiredError 快速失败。
+    返回 True 表示已填写并提交。
+    """
+    from core import aux_mail
+    aux = aux_mail.match_masked(masked_email)
+    if aux is None:
+        logger.warning(
+            "[Codex][Browser] 微软要求输入恢复邮箱 %s 的完整地址，但辅助邮箱池里没有匹配项；"
+            "请在「辅助邮箱」页导入该邮箱（邮箱----密码/授权码）", masked_email)
+        raise AuxMailRequiredError(
+            f"微软要求输入恢复邮箱 {masked_email} 的完整地址确认所有权，但辅助邮箱池里没有匹配项；"
+            "请在「辅助邮箱」页导入该邮箱（邮箱----密码/授权码）后重试")
+    aux_email = str(aux.get("email") or "")
+    try:
+        el = driver.find_element("css selector",
+            'input[name="proof-confirmation-email-input"],input[id="proof-confirmation-email-input"],'
+            'input[name*="proof-confirmation" i],input[id*="proof-confirmation" i]')
+    except Exception as exc:
+        logger.warning("[Codex][Browser] 找不到恢复邮箱确认输入框：%s", str(exc)[:120])
+        return False
+    _human_type_text(driver, el, aux_email, clear=True)
+    human_delay("form", minimum=1.2, maximum=2.0)
+    try:
+        btn = driver.find_element("css selector", "#idSIButton9")
+        _human_click(driver, btn, label="codex_ms_confirm_email")
+    except Exception:
+        driver.execute_script("const f=arguments[0].form; f ? f.submit() : arguments[0].click();", el)
+    logger.info("[Codex][Browser] 已填写并提交恢复邮箱完整地址（%s ← %s）", aux_email, masked_email)
+    human_delay("navigate")
+    return True
+
+
 def _fill_microsoft_protect_code(driver, masked_email: str) -> bool:
     """处理微软「Help us protect your account」页：向恢复邮箱发码并用辅助邮箱池收码。
 
@@ -516,10 +553,15 @@ const protect = /help us protect|protect your account|verify your email|セキ�
 const maskedMatch = text.match(/([A-Za-z0-9._%+-]{1,3})\*{2,}@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
 const codeInput = [...document.querySelectorAll('input[type="tel"],input[inputmode="numeric"],input[name*="otc" i],input[name*="code" i],input[maxlength]')].find(visible);
 const tou = /account\.live\.com\/tou|\/tou\/accrue/.test(location.href);
+// “输入恢复邮箱完整地址”确认页（德语等任意语言）：按输入框结构识别
+const confirmSel = 'input[name="proof-confirmation-email-input"],input[id="proof-confirmation-email-input"],input[name*="proof-confirmation" i],input[id*="proof-confirmation" i]';
+const confirmInput = [...document.querySelectorAll(confirmSel)].find(visible)
+  || document.querySelector(confirmSel);
+const protectHit = protect || !!confirmInput;
 return {
   pw: !!pw, primary: !!(primary && visible(primary)), use_pw: !!usePw,
-  protect: protect, masked: maskedMatch ? (maskedMatch[1] + '*****@' + maskedMatch[2]) : '',
-  code_input: !!codeInput, tou: tou,
+  protect: protectHit, masked: maskedMatch ? (maskedMatch[1] + '*****@' + maskedMatch[2]) : '',
+  code_input: !!codeInput, tou: tou, confirm_input: !!confirmInput,
 };
 """
 
@@ -621,9 +663,17 @@ def _fill_microsoft_login_if_present(driver, email: str, timeout: int = 20, auth
                 human_delay("form", minimum=1.5, maximum=2.5)
                 continue
             logger.warning("[Codex][Browser] 服务条款页没找到可点按钮：%s", clicked.get("reason") or "")
+        # 「确认您的电子邮箱」页：要求输入恢复邮箱完整地址（德语等各语言）
+        if state.get("confirm_input") and state.get("masked"):
+            if _fill_microsoft_confirm_email(driver, str(state.get("masked"))):
+                submitted = True
+                end = time.time() + 40
+                continue
+            logger.warning("[Codex][Browser] 恢复邮箱地址确认未完成，微软登录无法继续")
+            return False
         # 「保护账号」页：验证码发恢复邮箱，用辅助邮箱池收码。优先级高于主按钮——
         # 这种页面的主按钮就是 Send code，没有辅助邮箱收码，点了也白点。
-        if state.get("protect") and state.get("masked"):
+        if state.get("protect") and state.get("masked") and not state.get("confirm_input"):
             if _fill_microsoft_protect_code(driver, str(state.get("masked"))):
                 submitted = True
                 break
@@ -676,7 +726,13 @@ def _fill_microsoft_login_if_present(driver, email: str, timeout: int = 20, auth
                 human_delay("form", minimum=1.5, maximum=2.5)
                 continue
             logger.warning("[Codex][Browser] 服务条款页没找到可点按钮：%s", clicked.get("reason") or "")
-        if state.get("protect") and state.get("masked"):
+        if state.get("confirm_input") and state.get("masked"):
+            if _fill_microsoft_confirm_email(driver, str(state.get("masked"))):
+                end = time.time() + 240
+                continue
+            logger.warning("[Codex][Browser] 恢复邮箱地址确认未完成，微软登录无法继续")
+            return False
+        if state.get("protect") and state.get("masked") and not state.get("confirm_input"):
             # 密码提交后弹的二次验证：收码可能要一两分钟，成功后重置离开等待
             if _fill_microsoft_protect_code(driver, str(state.get("masked"))):
                 end = time.time() + 240
@@ -840,9 +896,12 @@ def _fill_email_and_otp(driver, email: str, otp_provider, auth_url: str) -> None
             # 微软登录慢回程：等 OTP 期间可能已经回到 OpenAI 授权/确认页，
             # 此时邮箱 OTP 永远等不到，直接进入后续授权步骤。
             try:
-                cur_url = str(driver.current_url or "").lower()
+                cur_url = str(driver.execute_script("return location.href;") or "").lower()
             except Exception:
-                cur_url = ""
+                try:
+                    cur_url = str(driver.current_url or "").lower()
+                except Exception:
+                    cur_url = ""
             if ("auth.openai.com" in cur_url or "chatgpt.com" in cur_url or "localhost" in cur_url) \
                     and "auth.openai.com/log-in" not in cur_url \
                     and not _is_email_verification_page(driver) and not _is_login_password_page(driver):
