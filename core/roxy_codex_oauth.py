@@ -2,8 +2,11 @@
 """通过 RoxyBrowser 指纹浏览器执行 Codex OAuth 授权。"""
 from __future__ import annotations
 
+import base64
+import json
 import logging
 import random
+import re
 import time
 from contextvars import ContextVar
 from urllib.parse import urlparse
@@ -167,6 +170,45 @@ def _extract_callback_url_from_any_window(driver) -> str:
     return ""
 
 
+_ERROR_PAGE_RE = re.compile(r"auth\.openai\.com/error\?payload=([A-Za-z0-9_\-]+)")
+
+
+def _detect_deactivated_error_page(driver) -> str:
+    """识别 auth.openai.com/error?payload=... 错误页（账号已废等）。
+
+    页面的 401/403 结果被编码进 payload（urlsafe base64 的 JSON），
+    其中 kind=AccountDeactivated 表示账号已被 OpenAI 停用，重试无意义，
+    直接按「账号已废」结束，避免一直报 callback 超时。
+    """
+    try:
+        url = str(driver.execute_script("return location.href;") or "") or str(driver.current_url or "")
+    except Exception:
+        try:
+            url = str(driver.current_url or "")
+        except Exception:
+            return ""
+    m = _ERROR_PAGE_RE.search(url)
+    if not m:
+        return ""
+    raw = m.group(1)
+    raw += "=" * (-len(raw) % 4)
+    try:
+        payload = json.loads(base64.urlsafe_b64decode(raw).decode("utf-8", "replace"))
+    except Exception:
+        return ""
+    kind = str(payload.get("kind") or "")
+    mapping = {
+        "AccountDeactivated": "account_deactivated",
+        "AccountDeleted": "account_deleted",
+        "AccountBanned": "account_banned",
+    }
+    code = mapping.get(kind, "")
+    if code:
+        logger.warning("[Codex][Browser] 授权页返回错误：kind=%s requestId=%s",
+                       kind, payload.get("requestId") or "")
+    return code
+
+
 def _wait_for_callback(driver, timeout: int | None = None) -> str:
     end = time.time() + (timeout or int(_roxy_cfg.ROXY_CODEX_CALLBACK_TIMEOUT))
     last_url = ""
@@ -179,6 +221,11 @@ def _wait_for_callback(driver, timeout: int | None = None) -> str:
             callback = _extract_callback_url_from_any_window(driver)
             if callback:
                 return callback
+            dead_code = _detect_deactivated_error_page(driver)
+            if dead_code:
+                raise AccountUnusableError(f"账号已废（{dead_code}）", error_code=dead_code)
+        except AccountUnusableError:
+            raise
         except Exception:
             pass
         time.sleep(0.5)
@@ -1785,6 +1832,9 @@ def _finish_consent_workspace(driver, auth_url: str = "") -> str:
         callback = _extract_callback_url_from_any_window(driver)
         if callback:
             return callback
+        dead_code = _detect_deactivated_error_page(driver)
+        if dead_code:
+            raise AccountUnusableError(f"账号已废（{dead_code}）", error_code=dead_code)
         current = str(driver.current_url or "")
         # 授权页走到 chrome-error（代理断连/本地回调无监听）且提取不到 callback 时，
         # 会话已建立：重开一次授权地址，通常直接静默跳到 callback。
