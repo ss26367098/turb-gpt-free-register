@@ -527,7 +527,7 @@ _MS_USE_PASSWORD_JS = r"""
 const visible = el => !!el && !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length)
   && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none';
 const hit = [...document.querySelectorAll('a,button,[role="link"],[role="button"]')]
-  .find(el => visible(el) && /use your password|using your password|パスワードを使用|使用密码|使用你的密[码碼]/i
+  .find(el => visible(el) && /use your password|using your password|パスワードを使用|使用密码|使用你的密[码碼]|kennwort verwenden|mit ihrem kennwort|stattdessen.{0,30}kennwort|utilisez votre mot de passe|utiliser votre mot de passe|usar su contrase|usar tu contrase|использовать пароль|войти с паролем/i
     .test(String(el.textContent || '').trim()));
 if (!hit) return {ok:false, reason:'missing_use_password_entry'};
 hit.scrollIntoView({block:'center'});
@@ -546,7 +546,7 @@ const visible = el => !!el && !!(el.offsetWidth || el.offsetHeight || el.getClie
 const pw = [...document.querySelectorAll('input[type="password"],input[name="passwd"],input[name*="password" i]')].find(visible);
 const primary = document.getElementById('idSIButton9');
 const usePw = [...document.querySelectorAll('a,button,[role="link"],[role="button"]')]
-  .find(el => visible(el) && /use your password|using your password|パスワードを使用|使用密码|使用你的密[码碼]/i
+  .find(el => visible(el) && /use your password|using your password|パスワードを使用|使用密码|使用你的密[码碼]|kennwort verwenden|mit ihrem kennwort|stattdessen.{0,30}kennwort|utilisez votre mot de passe|utiliser votre mot de passe|usar su contrase|usar tu contrase|использовать пароль|войти с паролем/i
     .test(String(el.textContent || '').trim()));
 const text = document.body ? document.body.innerText : '';
 const protect = /help us protect|protect your account|verify your email|セキュリティ コード|验证你的电子邮箱|保护你的帐户/i.test(text);
