@@ -1957,6 +1957,17 @@ def update_account_liveness(acc_id: int, result: dict | None = None) -> bool:
         now = _now()
         ok = bool(result.get("ok"))
         status = str(result.get("status") or ("live" if ok else "failed"))
+        # Codex 授权拿到的 AccountDeactivated 是 OpenAI 的结构化判决，比协议查活的
+        # 403/网络失败更确定；后者不能把已废结论降级成模糊的「失败」，否则会被
+        # 反复重试。
+        if (
+            status == "failed"
+            and str(row.get("live_check_status") or "").strip().lower() == "deactivated"
+            and str(row.get("codex_status") or "").strip().lower() == "deactivated"
+        ):
+            row["updated_at"] = now
+            _save_accounts(rows)
+            return True
         row["live_check_status"] = status
         row["live_check_ok"] = ok
         row["live_checked_at"] = result.get("checked_at") or now

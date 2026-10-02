@@ -204,8 +204,10 @@ def _detect_deactivated_error_page(driver) -> str:
     }
     code = mapping.get(kind, "")
     if code:
-        logger.warning("[Codex][Browser] 授权页返回错误：kind=%s requestId=%s",
-                       kind, payload.get("requestId") or "")
+        logger.warning("[Codex][Browser] 授权页返回错误：kind=%s requestId=%s retryUrl=%s 全量=%s",
+                       kind, payload.get("requestId") or "",
+                       str(payload.get("retryUrl") or "")[:80],
+                       json.dumps(payload, ensure_ascii=False)[:600])
     return code
 
 
